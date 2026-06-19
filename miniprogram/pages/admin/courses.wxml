@@ -1,0 +1,109 @@
+<view class="container">
+  <!-- 操作栏 -->
+  <view class="filter-bar">
+    <view class="filter-row">
+      <button class="btn-success btn-small" bindtap="onAdd">新增课程</button>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{courses.length === 0}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">📚</view>
+    <view>暂无课程数据</view>
+  </view>
+
+  <!-- 课程列表 -->
+  <view wx:else>
+    <view class="card" wx:for="{{courses}}" wx:key="course_id">
+      <view class="flex-between mb-16">
+        <view>
+          <text class="text-bold">{{item.course_name}}</text>
+          <text class="text-muted text-small" style="margin-left: 8rpx;">{{item.course_id}}</text>
+        </view>
+        <text class="tag {{item.status === 1 ? 'tag-excellent' : 'tag-fail'}}">
+          {{item.status === 1 ? '启用' : '停用'}}
+        </text>
+      </view>
+
+      <view class="course-info-grid">
+        <view class="course-info-item">
+          <text class="course-info-label">教师</text>
+          <text class="course-info-value">{{item.teacher_id}}</text>
+        </view>
+        <view class="course-info-item">
+          <text class="course-info-label">学期</text>
+          <text class="course-info-value">{{item.term}}</text>
+        </view>
+        <view class="course-info-item">
+          <text class="course-info-label">学分</text>
+          <text class="course-info-value">{{item.creditFmt}}</text>
+        </view>
+      </view>
+
+      <view class="score-actions">
+        <button class="btn-outline btn-small" bindtap="onEdit" data-item="{{item}}">编辑</button>
+      </view>
+    </view>
+
+    <!-- 分页 -->
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{page <= 1}}" bindtap="onPrevPage">上一页</button>
+      <text class="pagination-info">{{page}} / {{totalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{page >= totalPages}}" bindtap="onNextPage">下一页</button>
+    </view>
+  </view>
+
+  <!-- 新增/编辑弹窗 -->
+  <view wx:if="{{showForm}}" class="modal-mask" bindtap="onCloseForm">
+    <view class="modal-content" catchtap="noop">
+      <view class="card-title">{{formCourseId ? '编辑课程' : '新增课程'}}</view>
+
+      <view wx:if="{{!formCourseId}}" class="form-group">
+        <text class="form-label">课程号 *</text>
+        <input class="form-input" placeholder="如 MATH02" value="{{form.course_id}}" bindinput="onFormInput" data-field="course_id" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">课程名称 *</text>
+        <input class="form-input" placeholder="课程名称" value="{{form.course_name}}" bindinput="onFormInput" data-field="course_name" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">教师ID *</text>
+        <input class="form-input" placeholder="教师ID" value="{{form.teacher_id}}" bindinput="onFormInput" data-field="teacher_id" />
+        <button class="btn-outline btn-small admin-select-btn" bindtap="onPickFormOption" data-type="teachers" data-field="teacher_id">选择教师</button>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">学期 *</text>
+        <input class="form-input" placeholder="如 2025-2026-2" value="{{form.term}}" bindinput="onFormInput" data-field="term" />
+        <button class="btn-outline btn-small admin-select-btn" bindtap="onPickFormOption" data-type="terms" data-field="term">选择学期</button>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">学分</text>
+        <input class="form-input" placeholder="如 3.0" type="digit" value="{{form.credit}}" bindinput="onFormInput" data-field="credit" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">状态</text>
+        <picker range="{{statusOptions}}" value="{{statusIndex}}" bindchange="onStatusChange">
+          <view class="form-picker">
+            <text>{{statusOptions[statusIndex]}}</text>
+            <text class="form-picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="flex-row" style="gap: 16rpx; margin-top: 32rpx;">
+        <button class="btn-primary flex-1" bindtap="onSubmitForm" loading="{{formLoading}}">保存</button>
+        <button class="btn-outline flex-1" bindtap="onCloseForm">取消</button>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "AI 班级分析",
+  "usingComponents": {
+    "mock-badge": "/components/mock-badge/index",
+    "ai-result-card": "/components/ai-result-card/index"
+  }
+}

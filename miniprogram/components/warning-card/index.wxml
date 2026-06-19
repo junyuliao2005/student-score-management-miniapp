@@ -1,0 +1,32 @@
+<view class="warning-card">
+  <view class="warning-header">
+    <view class="warning-title">
+      <text class="text-bold">{{item.student_name || item.student_id}}</text>
+      <text class="text-muted text-small" style="margin-left: 8rpx;">{{item.student_id}}</text>
+    </view>
+    <text class="tag {{item.warningTagClass}}">{{item.warningTypeName}}</text>
+  </view>
+
+  <view class="warning-body">
+    <view class="warning-row" wx:if="{{item.class_name}}">
+      <text class="warning-label">班级</text>
+      <text class="warning-value">{{item.class_name}}</text>
+    </view>
+    <view class="warning-row">
+      <text class="warning-label">原因</text>
+      <text class="warning-value">{{item.reason}}</text>
+    </view>
+    <view class="warning-row" wx:if="{{item.course_name}}">
+      <text class="warning-label">课程</text>
+      <text class="warning-value">{{item.course_name}}</text>
+    </view>
+    <view class="warning-row" wx:if="{{item.score !== undefined && item.score !== null}}">
+      <text class="warning-label">分数</text>
+      <text class="warning-value text-danger">{{item.score}}</text>
+    </view>
+    <view class="warning-row" wx:if="{{item.avg_score !== undefined}}">
+      <text class="warning-label">平均分</text>
+      <text class="warning-value">{{item.avgScoreFmt}}</text>
+    </view>
+  </view>
+</view>

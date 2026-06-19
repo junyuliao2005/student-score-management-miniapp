@@ -1,0 +1,3 @@
+<view class="score-form">
+  <slot></slot>
+</view>

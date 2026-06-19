@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "试卷考点分析",
+  "usingComponents": {
+    "mock-badge": "/components/mock-badge/index",
+    "ai-result-card": "/components/ai-result-card/index"
+  }
+}

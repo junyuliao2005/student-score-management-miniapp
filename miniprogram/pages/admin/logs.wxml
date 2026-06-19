@@ -1,0 +1,51 @@
+<view class="container">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{logs.length === 0}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">📝</view>
+    <view>暂无日志数据</view>
+  </view>
+
+  <!-- 日志列表 -->
+  <view wx:else>
+    <view class="card log-card" wx:for="{{logs}}" wx:key="log_id">
+      <view class="flex-between mb-16">
+        <view>
+          <text class="text-bold">{{item.action}}</text>
+          <text class="tag tag-good" style="margin-left: 8rpx;">{{item.result_code === 0 ? '成功' : '失败'}}</text>
+        </view>
+        <text class="text-muted text-small">{{item.created_at}}</text>
+      </view>
+
+      <view class="log-detail">
+        <view class="log-row">
+          <text class="log-label">操作人</text>
+          <text class="log-value">{{item.operator_id}}</text>
+        </view>
+        <view class="log-row">
+          <text class="log-label">目标类型</text>
+          <text class="log-value">{{item.target_type}}</text>
+        </view>
+        <view class="log-row">
+          <text class="log-label">目标ID</text>
+          <text class="log-value">{{item.target_id}}</text>
+        </view>
+        <view class="log-row" wx:if="{{item.trace_id}}">
+          <text class="log-label">Trace ID</text>
+          <text class="log-value text-small">{{item.trace_id}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 分页 -->
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{page <= 1}}" bindtap="onPrevPage">上一页</button>
+      <text class="pagination-info">{{page}} / {{totalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{page >= totalPages}}" bindtap="onNextPage">下一页</button>
+    </view>
+  </view>
+</view>

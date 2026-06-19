@@ -1,0 +1,50 @@
+.import-entry-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.import-entry-title {
+  color: #333333;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.import-entry-desc {
+  color: #999999;
+  font-size: 24rpx;
+  margin-top: 8rpx;
+}
+
+.input-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  width: 100%;
+}
+
+.input-select-input {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #dddddd;
+  border-radius: 10rpx;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-size: 26rpx;
+}
+
+.input-select-btn {
+  width: 140rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  border: 1rpx solid #1890ff;
+  color: #1890ff;
+  border-radius: 10rpx;
+  background: #ffffff;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}

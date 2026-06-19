@@ -1,0 +1,44 @@
+<view class="container">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{configs.length === 0}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">⚙️</view>
+    <view>暂无配置数据</view>
+  </view>
+
+  <!-- 配置列表 -->
+  <view wx:else>
+    <view class="card" wx:for="{{configs}}" wx:key="config_key">
+      <view class="config-header">
+        <text class="text-bold">{{item.config_key}}</text>
+        <text class="text-muted text-small">{{item.config_type}}</text>
+      </view>
+
+      <view wx:if="{{item.remark}}" class="config-remark text-muted text-small">
+        {{item.remark}}
+      </view>
+
+      <view class="config-value-row">
+        <switch
+          wx:if="{{item.config_type === 'bool'}}"
+          checked="{{item.config_value === 'true' || item.config_value === '1'}}"
+          bindchange="onBoolChange"
+          data-index="{{index}}"
+        />
+        <input
+          wx:else
+          class="form-input"
+          value="{{item.config_value}}"
+          bindinput="onValueInput"
+          data-index="{{index}}"
+          placeholder="配置值"
+        />
+        <button class="btn-primary btn-small" bindtap="onSave" data-key="{{item.config_key}}" data-index="{{index}}">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,94 @@
+.warning-card-item {
+  border-left: 6rpx solid #ff4d4f;
+}
+
+.filter-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.form-item {
+  width: 100%;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 28rpx;
+  color: #333333;
+}
+
+.input-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  width: 100%;
+}
+
+.input-select-input {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #dddddd;
+  border-radius: 10rpx;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-size: 26rpx;
+}
+
+.form-input-solid {
+  width: 100%;
+  min-width: 0;
+  height: 72rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #dddddd;
+  border-radius: 10rpx;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-size: 26rpx;
+}
+
+.input-select-btn {
+  width: 140rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  border: 1rpx solid #1890ff;
+  color: #1890ff;
+  border-radius: 10rpx;
+  background: #ffffff;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+.filter-actions {
+  margin-top: 20rpx;
+}
+
+.warning-detail {
+  background: #fafafa;
+  border-radius: 8rpx;
+  padding: 16rpx;
+}
+
+.warning-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: 8rpx 0;
+}
+
+.warning-label {
+  font-size: 24rpx;
+  color: #999999;
+  flex-shrink: 0;
+  min-width: 120rpx;
+}
+
+.warning-value {
+  font-size: 26rpx;
+  color: #333333;
+  word-break: break-all;
+}

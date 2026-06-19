@@ -1,0 +1,122 @@
+<view class="container">
+  <!-- 用户信息卡片 -->
+  <view class="card user-card">
+    <view class="user-info">
+      <view class="user-avatar">{{user.real_name[0] || '?'}}</view>
+      <view class="user-detail">
+        <view class="user-name">{{user.real_name || '未登录'}}</view>
+        <view class="user-role">
+          <text class="tag {{roleTagClass}}">{{roleName}}</text>
+          <text wx:if="{{user.class_name}}" class="text-muted text-small" style="margin-left: 12rpx;">{{user.class_name}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能入口 -->
+  <view class="card">
+    <view class="card-title">功能入口</view>
+    <view class="menu-grid">
+      <!-- 成绩录入 -->
+      <view wx:if="{{perms.canCreateScore}}" class="menu-item" bindtap="goTo" data-url="/pages/score-edit/index">
+        <view class="menu-icon">✏️</view>
+        <view class="menu-text">成绩录入</view>
+      </view>
+
+      <!-- 成绩查询 -->
+      <view wx:if="{{perms.canReadAllScores}}" class="menu-item" bindtap="goTo" data-url="/pages/score-list/index">
+        <view class="menu-icon">📋</view>
+        <view class="menu-text">成绩查询</view>
+      </view>
+
+      <!-- 我的成绩 -->
+      <view wx:if="{{perms.canReadSelfScore}}" class="menu-item" bindtap="goTo" data-url="/pages/score-my/index">
+        <view class="menu-icon">📊</view>
+        <view class="menu-text">我的成绩</view>
+      </view>
+
+      <!-- 统计分析 -->
+      <view wx:if="{{perms.canReadStats}}" class="menu-item" bindtap="goTo" data-url="/pages/stats/index">
+        <view class="menu-icon">📈</view>
+        <view class="menu-text">统计分析</view>
+      </view>
+
+      <!-- 预警名单 -->
+      <view wx:if="{{perms.canReadWarnings}}" class="menu-item" bindtap="goTo" data-url="/pages/warnings/index">
+        <view class="menu-icon">⚠️</view>
+        <view class="menu-text">预警名单</view>
+      </view>
+
+      <!-- 师生留言 -->
+      <view class="menu-item" bindtap="goTo" data-url="/pages/messages/index">
+        <view class="menu-icon">💬</view>
+        <view class="menu-text">师生留言</view>
+      </view>
+
+      <!-- 家长端 -->
+      <view wx:if="{{perms.isParent}}" class="menu-item" bindtap="goTo" data-url="/pages/parent/home">
+        <view class="menu-icon">👨‍👩‍👧</view>
+        <view class="menu-text">孩子成绩</view>
+      </view>
+
+      <!-- 考试发布 -->
+      <view wx:if="{{perms.canManageExamPublish}}" class="menu-item" bindtap="goTo" data-url="/pages/exam-publish/index">
+        <view class="menu-icon">📢</view>
+        <view class="menu-text">考试发布</view>
+      </view>
+
+      <!-- 家长绑定 -->
+      <view wx:if="{{perms.canManageParentBindings}}" class="menu-item" bindtap="goTo" data-url="/pages/parent-bindings/index">
+        <view class="menu-icon">🔗</view>
+        <view class="menu-text">家长绑定</view>
+      </view>
+
+      <!-- 用户管理 -->
+      <view wx:if="{{perms.canManageUsers}}" class="menu-item" bindtap="goTo" data-url="/pages/admin/users">
+        <view class="menu-icon">👥</view>
+        <view class="menu-text">用户管理</view>
+      </view>
+
+      <!-- 课程管理 -->
+      <view wx:if="{{perms.canManageCourses}}" class="menu-item" bindtap="goTo" data-url="/pages/admin/courses">
+        <view class="menu-icon">📚</view>
+        <view class="menu-text">课程管理</view>
+      </view>
+
+      <!-- 配置管理 -->
+      <view wx:if="{{perms.canManageConfigs}}" class="menu-item" bindtap="goTo" data-url="/pages/admin/configs">
+        <view class="menu-icon">⚙️</view>
+        <view class="menu-text">配置管理</view>
+      </view>
+
+      <!-- 日志查询 -->
+      <view wx:if="{{perms.canReadLogs}}" class="menu-item" bindtap="goTo" data-url="/pages/admin/logs">
+        <view class="menu-icon">📝</view>
+        <view class="menu-text">日志查询</view>
+      </view>
+
+      <!-- AI 学习建议 -->
+      <view wx:if="{{perms.canAiAdvice}}" class="menu-item" bindtap="goTo" data-url="/pages/ai-advice/index">
+        <view class="menu-icon">🤖</view>
+        <view class="menu-text">AI 学习建议</view>
+      </view>
+
+      <!-- AI 班级分析 -->
+      <view wx:if="{{perms.canAiClass}}" class="menu-item" bindtap="goTo" data-url="/pages/ai-class/index">
+        <view class="menu-icon">📊</view>
+        <view class="menu-text">AI 班级分析</view>
+      </view>
+
+      <!-- 试卷考点分析 -->
+      <view wx:if="{{perms.canAiExam}}" class="menu-item" bindtap="goTo" data-url="/pages/exam-analyze/index">
+        <view class="menu-icon">📝</view>
+        <view class="menu-text">试卷考点分析</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="card">
+    <button class="btn-danger btn-block" bindtap="onLogout">退出登录</button>
+  </view>
+</view>

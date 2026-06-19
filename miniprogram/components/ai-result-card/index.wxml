@@ -1,0 +1,36 @@
+<view class="ai-result-card">
+  <view wx:if="{{title}}" class="ai-result-title">
+    <text>{{title}}</text>
+  </view>
+
+  <!-- 单个文本段落 -->
+  <view wx:if="{{text}}" class="ai-result-text">
+    <text>{{text}}</text>
+  </view>
+
+  <!-- 列表项 -->
+  <view wx:if="{{items && items.length > 0}}" class="ai-result-list">
+    <view class="ai-result-list-item" wx:for="{{items}}" wx:key="index">
+      <text class="ai-result-bullet">•</text>
+      <text class="ai-result-item-text">{{item}}</text>
+    </view>
+  </view>
+
+  <!-- 键值对 -->
+  <view wx:if="{{fields && fields.length > 0}}" class="ai-result-fields">
+    <view class="ai-result-field" wx:for="{{fields}}" wx:key="label">
+      <text class="ai-result-field-label">{{item.label}}</text>
+      <text class="ai-result-field-value">{{item.value}}</text>
+    </view>
+  </view>
+
+  <!-- 子标题段落 -->
+  <view wx:if="{{sections && sections.length > 0}}" class="ai-result-sections">
+    <view class="ai-result-section" wx:for="{{sections}}" wx:key="title">
+      <view class="ai-result-section-title">{{item.title}}</view>
+      <view class="ai-result-section-content">{{item.content}}</view>
+    </view>
+  </view>
+
+  <slot></slot>
+</view>

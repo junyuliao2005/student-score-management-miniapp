@@ -1,0 +1,37 @@
+<view class="container">
+  <view class="card" wx:if="{{canManage}}">
+    <view class="card-title">新增家长绑定</view>
+    <view class="form-group">
+      <text class="form-label">家长用户名</text>
+      <input class="form-input" value="{{form.parent_username}}" placeholder="如 parent01" bindinput="onInput" data-field="parent_username" />
+    </view>
+    <view class="form-group">
+      <text class="form-label">学生用户名</text>
+      <input class="form-input" value="{{form.student_username}}" placeholder="如真实学生 username" bindinput="onInput" data-field="student_username" />
+    </view>
+    <view class="form-group">
+      <text class="form-label">关系</text>
+      <input class="form-input" value="{{form.relation}}" placeholder="如 父亲 / 母亲 / 家长" bindinput="onInput" data-field="relation" />
+    </view>
+    <button class="btn-primary btn-block" bindtap="onCreate">保存绑定</button>
+  </view>
+
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">加载中...</view>
+
+  <view wx:elif="{{errorText}}" class="card">
+    <view class="text-center text-muted">{{errorText}}</view>
+    <button class="btn-primary btn-block mt-16" bindtap="loadData">重试</button>
+  </view>
+
+  <view wx:else class="card">
+    <view class="card-title">绑定关系</view>
+    <view wx:if="{{list.length === 0}}" class="text-center text-muted">暂无家长绑定记录，可点击新增绑定</view>
+    <view wx:for="{{list}}" wx:key="id" class="binding-row">
+      <view>
+        <view>{{item.parent_name || item.parent_user_id}} → {{item.student_name || item.student_user_id}}</view>
+        <view class="text-muted text-small">{{item.student_username || '-'}} | {{item.class_name || '-'}} | {{item.relation}}</view>
+      </view>
+      <button wx:if="{{canManage}}" class="btn-danger btn-small" bindtap="onDisable" data-id="{{item.id}}">停用</button>
+    </view>
+  </view>
+</view>

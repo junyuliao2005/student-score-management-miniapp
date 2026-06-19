@@ -1,0 +1,103 @@
+<view class="container">
+  <view class="card">
+    <view class="flex-between">
+      <view class="card-title">考试发布管理</view>
+      <button class="btn-primary btn-small" bindtap="onToggleForm">{{formExpanded ? '收起' : '新建发布'}}</button>
+    </view>
+
+    <view wx:if="{{formExpanded}}" class="publish-form">
+      <view class="form-group">
+        <text class="form-label">考试名称</text>
+        <input class="form-input" value="{{form.exam_name}}" placeholder="如 初一期末成绩发布" bindinput="onInput" data-field="exam_name" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">学期</text>
+        <view class="input-select-row">
+          <input class="form-input input-select-input" value="{{form.term}}" placeholder="请输入学期或点击选择" bindinput="onInput" data-field="term" />
+          <picker mode="selector" range="{{optionMap.terms}}" range-key="label" data-type="terms" data-field="term" bindchange="onPick">
+            <view class="input-select-btn">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-group">
+        <text class="form-label">考试批次</text>
+        <view class="input-select-row">
+          <input class="form-input input-select-input" value="{{form.exam_batch}}" placeholder="请输入考试批次或点击选择" bindinput="onInput" data-field="exam_batch" />
+          <picker mode="selector" range="{{optionMap.exam_batches}}" range-key="label" data-type="exam_batches" data-field="exam_batch" bindchange="onPick">
+            <view class="input-select-btn">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-group">
+        <text class="form-label">年级（可选）</text>
+        <view class="input-select-row">
+          <input class="form-input input-select-input" value="{{form.grade_name}}" placeholder="如 高三；留空表示全部年级" bindinput="onInput" data-field="grade_name" />
+          <picker mode="selector" range="{{gradeOptions}}" range-key="label" data-type="grades" data-field="grade_name" bindchange="onPick">
+            <view class="input-select-btn">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-group">
+        <text class="form-label">班级（可选）</text>
+        <view class="input-select-row">
+          <input class="form-input input-select-input" value="{{form.class_name}}" placeholder="如 高三(3)班；留空表示全部班级" bindinput="onInput" data-field="class_name" />
+          <picker mode="selector" range="{{optionMap.classes}}" range-key="label" data-type="classes" data-field="class_name" bindchange="onPick">
+            <view class="input-select-btn">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="switch-list">
+        <label><switch checked="{{form.show_total}}" bindchange="onSwitch" data-field="show_total" />显示总分</label>
+        <label><switch checked="{{form.show_rank}}" bindchange="onSwitch" data-field="show_rank" />显示排名</label>
+        <label><switch checked="{{form.show_grade_rank}}" bindchange="onSwitch" data-field="show_grade_rank" />显示年级排名</label>
+        <label><switch checked="{{form.show_class_average}}" bindchange="onSwitch" data-field="show_class_average" />显示班级均分</label>
+        <label><switch checked="{{form.show_subject_scores}}" bindchange="onSwitch" data-field="show_subject_scores" />显示各科成绩</label>
+        <label><switch checked="{{form.require_parent_signature}}" bindchange="onSwitch" data-field="require_parent_signature" />需要家长签名</label>
+      </view>
+      <button class="btn-primary btn-block" bindtap="onCreate">保存发布设置</button>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">加载中...</view>
+
+  <view wx:elif="{{errorText}}" class="card">
+    <view class="text-center text-muted">{{errorText}}</view>
+    <button class="btn-primary btn-block mt-16" bindtap="loadList">重试</button>
+  </view>
+
+  <view wx:elif="{{list.length === 0}}" class="card">
+    <view class="text-center text-muted">暂无考试发布记录，可点击新建发布</view>
+  </view>
+
+  <view wx:else>
+    <view wx:for="{{list}}" wx:key="id" class="card">
+      <view class="flex-between mb-16">
+        <view>
+          <view class="text-bold">{{item.exam_name}}</view>
+          <view class="text-muted text-small">{{item.term}} | {{item.exam_batch}} | {{item.grade_name || '全部年级'}} | {{item.class_name || '全部班级'}}</view>
+        </view>
+        <text class="tag {{item.status === 'published' ? 'tag-good' : item.status === 'withdrawn' ? 'tag-fail' : 'tag-medium'}}">{{item.status}}</text>
+      </view>
+      <view class="text-muted text-small">家长签名：{{item.require_parent_signature ? '需要' : '不需要'}} | 发布时间：{{item.publish_time || '-'}}</view>
+      <view class="text-muted text-small">匹配学生数：{{item.matched_student_count || 0}} | 匹配成绩数：{{item.matched_score_count || 0}}</view>
+      <view wx:if="{{item.matched_score_count === 0}}" class="match-warning">当前发布设置未匹配到成绩，请检查学期、考试批次、年级、班级是否正确。</view>
+      <view class="action-row">
+        <button wx:if="{{item.status !== 'published'}}" class="btn-success btn-small" bindtap="onPublish" data-id="{{item.id}}">发布</button>
+        <button wx:if="{{item.status === 'published'}}" class="btn-warning btn-small" bindtap="onWithdraw" data-id="{{item.id}}">撤回</button>
+        <button wx:if="{{item.status !== 'published'}}" class="btn-danger btn-small" bindtap="onDelete" data-id="{{item.id}}">删除</button>
+        <button class="btn-outline btn-small" bindtap="onLoadConfirmations" data-id="{{item.id}}">确认情况</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{confirmations.length > 0}}" class="card">
+    <view class="card-title">确认情况</view>
+    <view wx:for="{{confirmations}}" wx:key="id" class="confirm-row">
+      <view>
+        <view>{{item.student_name || item.student_user_id}} / {{item.parent_name || item.parent_user_id}}</view>
+        <view class="text-muted text-small">{{item.class_name || '-'}} | {{item.confirmed_at || '未确认'}}</view>
+      </view>
+      <text class="tag {{item.confirm_status === 'confirmed' ? 'tag-good' : 'tag-medium'}}">{{item.confirm_status}}</text>
+    </view>
+  </view>
+</view>

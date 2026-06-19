@@ -1,0 +1,29 @@
+.log-card {
+  border-left: 6rpx solid #1890ff;
+}
+
+.log-detail {
+  background: #fafafa;
+  border-radius: 8rpx;
+  padding: 16rpx;
+}
+
+.log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: 8rpx 0;
+}
+
+.log-label {
+  font-size: 24rpx;
+  color: #999999;
+  flex-shrink: 0;
+  min-width: 120rpx;
+}
+
+.log-value {
+  font-size: 26rpx;
+  color: #333333;
+  word-break: break-all;
+}

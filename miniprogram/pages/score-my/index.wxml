@@ -1,0 +1,157 @@
+<view class="container">
+  <!-- 学生信息 -->
+  <view class="card" wx:if="{{studentInfo}}">
+    <view class="flex-between">
+      <view>
+        <view class="text-bold" style="font-size: 32rpx;">{{studentInfo.student_name}}</view>
+        <view class="text-muted text-small">{{studentInfo.student_id}} | {{studentInfo.class_name}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{summary}}">
+    <view class="card-title">本次考试成绩总览</view>
+    <view class="summary-meta">
+      <text wx:if="{{summary.term}}">学期：{{summary.term}}</text>
+      <text wx:if="{{summary.exam_batch}}">考试批次：{{summary.exam_batch}}</text>
+    </view>
+    <view class="summary-grid">
+      <view class="summary-item" wx:if="{{displaySettings.show_total}}">
+        <text class="summary-value">{{summary.totalScoreFmt}}</text>
+        <text class="summary-label">总分</text>
+      </view>
+      <view class="summary-item" wx:if="{{displaySettings.show_class_stats}}">
+        <text class="summary-value">{{summary.avgScoreFmt}}</text>
+        <text class="summary-label">平均分</text>
+      </view>
+      <view class="summary-item" wx:if="{{displaySettings.show_rank}}">
+        <text class="summary-value">{{summary.classRankFmt}}</text>
+        <text class="summary-label">班级排名</text>
+      </view>
+      <view class="summary-item" wx:if="{{displaySettings.show_rank}}">
+        <text class="summary-value">{{summary.overallRankFmt}}</text>
+        <text class="summary-label">总排名</text>
+      </view>
+      <view class="summary-item">
+        <text class="summary-value">{{summary.subjectCountText}}</text>
+        <text class="summary-label">科目数</text>
+      </view>
+    </view>
+    <view class="summary-subjects" wx:if="{{summary.subjectText}}">
+      {{summary.subjectText}}
+    </view>
+    <view class="weak-tip" wx:if="{{displaySettings.show_warning && summary.weak_subject_tip}}">
+      {{summary.weak_subject_tip}}
+    </view>
+  </view>
+
+  <view class="search-toggle">
+    <button class="btn-outline btn-small" bindtap="onToggleFilter">
+      {{filterExpanded ? '收起筛选' : '筛选/搜索'}}
+    </button>
+    <text class="search-summary">{{filters.term || '未选学期'}} | {{filters.exam_batch || '未选批次'}}<text wx:if="{{filters.course_id || filters.course_name}}"> | {{filters.course_id || filters.course_name}}</text></text>
+  </view>
+
+  <!-- 筛选 -->
+  <view class="filter-bar" wx:if="{{filterExpanded}}">
+    <view class="filter-grid">
+      <view class="form-item">
+        <text class="form-label">学期</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入学期或点击选择" value="{{filters.term}}" bindinput="onFilterInput" data-field="term" />
+          <picker mode="selector" range="{{optionMap.terms}}" range-key="label" data-type="terms" data-field="term" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="terms">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="form-label">考试批次</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入批次或点击选择" value="{{filters.exam_batch}}" bindinput="onFilterInput" data-field="exam_batch" />
+          <picker mode="selector" range="{{optionMap.exam_batches}}" range-key="label" data-type="exam_batches" data-field="exam_batch" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="exam_batches">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="form-label">课程号</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入课程号，可不填" value="{{filters.course_id}}" bindinput="onFilterInput" data-field="course_id" />
+          <picker mode="selector" range="{{optionMap.course_ids}}" range-key="label" data-type="course_ids" data-field="course_id" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="course_ids">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="form-label">课程名称</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入课程名称，可不填" value="{{filters.course_name}}" bindinput="onFilterInput" data-field="course_name" />
+          <picker mode="selector" range="{{optionMap.course_names}}" range-key="label" data-type="course_names" data-field="course_name" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="course_names">选择</view>
+          </picker>
+        </view>
+      </view>
+    </view>
+    <view class="filter-row">
+      <button class="btn-primary btn-small filter-btn" bindtap="onSearch">查询</button>
+      <button class="btn-outline btn-small filter-btn" bindtap="onReset">重置</button>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{scores.length === 0}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">📊</view>
+    <view>{{emptyText}}</view>
+  </view>
+
+  <!-- 成绩列表 -->
+  <view wx:else>
+    <view class="card" wx:for="{{scores}}" wx:key="score_id">
+      <view class="flex-between mb-16">
+        <view>
+          <text class="text-bold">{{item.courseNameText}}</text>
+          <text class="text-muted text-small" style="margin-left: 8rpx;">{{item.exam_batch}}</text>
+        </view>
+        <text class="tag {{item.levelTagClass}}">{{item.level_tag || '-'}}</text>
+      </view>
+
+      <view class="my-score-main">
+        <view class="my-score-value">{{item.score}}</view>
+        <view class="my-score-label">分数</view>
+      </view>
+
+      <view class="my-stats-row" wx:if="{{item.total_score !== null}}">
+        <view class="my-stat-item" wx:if="{{displaySettings.show_total}}">
+          <text class="my-stat-label">总分</text>
+          <text class="my-stat-value">{{item.totalScoreFmt}}</text>
+        </view>
+        <view class="my-stat-item">
+          <text class="my-stat-label">均分</text>
+          <text class="my-stat-value">{{item.avgScoreFmt}}</text>
+        </view>
+        <view class="my-stat-item" wx:if="{{displaySettings.show_rank}}">
+          <text class="my-stat-label">排名</text>
+          <text class="my-stat-value">{{item.rankFmt}}</text>
+        </view>
+      </view>
+
+      <view wx:else class="text-center text-muted text-small" style="padding: 16rpx 0;">
+        统计信息待生成
+      </view>
+
+      <view wx:if="{{item.comment_text}}" class="my-comment">
+        <text class="text-small text-muted">评语：</text>
+        <text class="text-small">{{item.comment_text}}</text>
+      </view>
+
+      <view class="text-muted text-small" style="margin-top: 8rpx;">
+        考试日期：{{item.exam_date}}
+      </view>
+    </view>
+  </view>
+</view>

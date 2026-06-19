@@ -1,0 +1,105 @@
+<view class="container">
+  <view wx:if="{{!isEdit && canCreateScore}}" class="card import-entry-card">
+    <view>
+      <view class="import-entry-title">批量导入成绩</view>
+      <view class="import-entry-desc">从 Excel .xlsx 文件预览校验后批量录入</view>
+    </view>
+    <button class="btn-warning btn-small" bindtap="onImport">进入导入</button>
+  </view>
+
+  <view class="card">
+    <view class="card-title">{{isEdit ? '修改成绩' : '录入成绩'}}</view>
+
+    <!-- 学号 -->
+    <view class="form-group">
+      <text class="form-label">学号 *</text>
+      <view class="input-select-row">
+        <input
+          class="input-select-input {{errors.student_id ? 'form-input-error' : ''}}"
+          placeholder="请输入学号或点击选择"
+          value="{{form.student_id}}"
+          bindinput="onInput"
+          data-field="student_id"
+          disabled="{{isEdit}}"
+        />
+        <picker wx:if="{{!isEdit}}" mode="selector" range="{{optionMap.students}}" range-key="label" data-type="students" data-field="student_id" bindchange="onPickFormOption">
+          <view class="input-select-btn" bindtap="onPickerTap" data-type="students">选择</view>
+        </picker>
+      </view>
+      <text wx:if="{{errors.student_id}}" class="form-error">{{errors.student_id}}</text>
+    </view>
+
+    <!-- 课程号 -->
+    <view class="form-group">
+      <text class="form-label">课程号 *</text>
+      <view class="input-select-row">
+        <input
+          class="input-select-input {{errors.course_id ? 'form-input-error' : ''}}"
+          placeholder="请输入课程号或点击选择"
+          value="{{form.course_id}}"
+          bindinput="onInput"
+          data-field="course_id"
+          disabled="{{isEdit}}"
+        />
+        <picker wx:if="{{!isEdit}}" mode="selector" range="{{optionMap.course_ids}}" range-key="label" data-type="course_ids" data-field="course_id" bindchange="onPickFormOption">
+          <view class="input-select-btn" bindtap="onPickerTap" data-type="course_ids">选择</view>
+        </picker>
+      </view>
+      <text wx:if="{{errors.course_id}}" class="form-error">{{errors.course_id}}</text>
+    </view>
+
+    <!-- 分数 -->
+    <view class="form-group">
+      <text class="form-label">分数 *</text>
+      <input
+        class="form-input {{errors.score ? 'form-input-error' : ''}}"
+        placeholder="请输入分数 (0-100)"
+        type="digit"
+        value="{{form.score}}"
+        bindinput="onInput"
+        data-field="score"
+      />
+      <text wx:if="{{errors.score}}" class="form-error">{{errors.score}}</text>
+    </view>
+
+    <!-- 考试日期 -->
+    <view class="form-group">
+      <text class="form-label">考试日期 *</text>
+      <picker mode="date" value="{{form.exam_date}}" bindchange="onDateChange">
+        <view class="form-picker">
+          <text>{{form.exam_date || '请选择日期'}}</text>
+          <text class="form-picker-arrow">▼</text>
+        </view>
+      </picker>
+      <text wx:if="{{errors.exam_date}}" class="form-error">{{errors.exam_date}}</text>
+    </view>
+
+      <!-- 考试批次 -->
+      <view class="form-group">
+        <text class="form-label">考试批次 *</text>
+        <view class="input-select-row">
+          <input
+            class="input-select-input {{errors.exam_batch ? 'form-input-error' : ''}}"
+            placeholder="请输入批次或点击选择"
+            value="{{form.exam_batch}}"
+            bindinput="onInput"
+            data-field="exam_batch"
+          />
+          <picker mode="selector" range="{{optionMap.exam_batches}}" range-key="label" data-type="exam_batches" data-field="exam_batch" bindchange="onPickFormOption">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="exam_batches">选择</view>
+          </picker>
+        </view>
+      <text wx:if="{{errors.exam_batch}}" class="form-error">{{errors.exam_batch}}</text>
+    </view>
+
+    <!-- 提交按钮 -->
+    <button
+      class="btn-primary btn-block"
+      bindtap="onSubmit"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+    >
+      {{isEdit ? '保存修改' : '提交录入'}}
+    </button>
+  </view>
+</view>

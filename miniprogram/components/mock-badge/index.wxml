@@ -1,0 +1,3 @@
+<view wx:if="{{visible}}" class="mock-badge">
+  <text class="mock-badge-text">{{text || '演示模式'}}</text>
+</view>

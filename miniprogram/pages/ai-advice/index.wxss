@@ -1,0 +1,17 @@
+.meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  padding: 8rpx 0;
+}
+
+.meta-label {
+  font-size: 24rpx;
+  color: #999999;
+  flex-shrink: 0;
+}
+
+.meta-value {
+  font-size: 24rpx;
+  color: #666666;
+}

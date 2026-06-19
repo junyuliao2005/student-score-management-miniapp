@@ -1,0 +1,23 @@
+.config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.config-remark {
+  margin-bottom: 16rpx;
+  padding: 12rpx;
+  background: #fafafa;
+  border-radius: 8rpx;
+}
+
+.config-value-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.config-value-row .form-input {
+  flex: 1;
+}

@@ -1,0 +1,6 @@
+<view class="stat-panel">
+  <view class="stat-item" wx:for="{{items}}" wx:key="label">
+    <text class="stat-value {{item.colorClass || ''}}">{{item.value}}</text>
+    <text class="stat-label">{{item.label}}</text>
+  </view>
+</view>

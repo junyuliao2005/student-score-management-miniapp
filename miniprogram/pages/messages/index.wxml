@@ -1,0 +1,99 @@
+<view class="container">
+  <view class="card">
+    <view class="flex-between">
+      <view>
+        <view class="card-title">师生留言</view>
+        <view class="text-muted text-small">未读 {{unreadCount}} 条</view>
+      </view>
+      <button class="btn-outline btn-small" bindtap="onReadAll">全部已读</button>
+    </view>
+
+    <view class="tabs">
+      <view class="tab {{box === 'received' ? 'tab-active' : ''}}" bindtap="onBoxChange" data-box="received">我收到的</view>
+      <view class="tab {{box === 'sent' ? 'tab-active' : ''}}" bindtap="onBoxChange" data-box="sent">我发送的</view>
+      <view class="tab {{box === 'unread' ? 'tab-active' : ''}}" bindtap="onBoxChange" data-box="unread">未读</view>
+      <view wx:if="{{isAdmin}}" class="tab {{box === 'all' ? 'tab-active' : ''}}" bindtap="onBoxChange" data-box="all">全部</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">发送留言</view>
+
+    <view class="form-group">
+      <text class="form-label">接收人</text>
+      <view wx:if="{{contactsLoading}}" class="contact-status">正在加载接收人，请稍候</view>
+      <view wx:elif="{{contactError}}" class="empty-contact">
+        <text>{{contactError}}</text>
+        <button class="btn-outline btn-small reload-contact-btn" bindtap="onReloadContacts">重新加载接收人</button>
+      </view>
+      <picker wx:elif="{{contacts.length > 0}}" mode="selector" range="{{contacts}}" range-key="real_name" value="{{receiverIndex}}" bindchange="onReceiverChange">
+        <view class="picker-box">
+          {{receiverLabel}}
+        </view>
+      </picker>
+      <view wx:else class="empty-contact">
+        <text>暂无可选接收人</text>
+        <button class="btn-outline btn-small reload-contact-btn" bindtap="onReloadContacts">重新加载接收人</button>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">标题</text>
+      <input class="form-input" placeholder="如 期中成绩反馈" value="{{title}}" bindinput="onInput" data-field="title" />
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">内容</text>
+      <textarea class="form-textarea" placeholder="请输入留言内容" value="{{content}}" bindinput="onInput" data-field="content" />
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">课程编号（可选）</text>
+      <input class="form-input" placeholder="如 MATH01" value="{{courseId}}" bindinput="onInput" data-field="courseId" />
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">考试批次（可选）</text>
+      <input class="form-input" placeholder="如 期中" value="{{examBatch}}" bindinput="onInput" data-field="examBatch" />
+    </view>
+
+    <button class="btn-primary btn-block" bindtap="onSend" loading="{{sending}}" disabled="{{sending || contactsLoading}}">
+      发送留言
+    </button>
+  </view>
+
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <view wx:elif="{{messages.length === 0}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">💬</view>
+    <view>暂无留言</view>
+  </view>
+
+  <view wx:else>
+    <view class="card message-card {{item.is_read ? '' : 'message-unread'}}" wx:for="{{messages}}" wx:key="message_id" bindtap="onMessageTap" data-item="{{item}}">
+      <view class="flex-between mb-16">
+        <view class="message-title">{{item.title}}</view>
+        <text class="tag {{item.is_read ? 'tag-good' : 'tag-fail'}}">{{item.is_read ? '已读' : '未读'}}</text>
+      </view>
+      <view class="message-meta">
+        {{item.sender_name || item.sender_id}} → {{item.receiver_name || item.receiver_id}}
+      </view>
+      <view class="message-meta">
+        {{item.created_at}}<text wx:if="{{item.course_id}}"> | {{item.course_id}}</text><text wx:if="{{item.exam_batch}}"> | {{item.exam_batch}}</text>
+      </view>
+      <view class="message-content">{{item.content}}</view>
+    </view>
+
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{page <= 1}}" bindtap="onPrevPage">上一页</button>
+      <text class="pagination-info">{{page}} / {{totalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{page >= totalPages}}" bindtap="onNextPage">下一页</button>
+    </view>
+  </view>
+
+  <view wx:if="{{errorMsg}}" class="card error-card">
+    <text class="text-danger">{{errorMsg}}</text>
+  </view>
+</view>

@@ -1,0 +1,99 @@
+<view class="container">
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <view class="filter-grid">
+      <view class="form-item">
+        <text class="form-label">学期</text>
+        <input class="form-input-solid" placeholder="请输入学期" value="{{filters.term}}" bindinput="onFilterInput" data-field="term" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">班级</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入班级或点击选择" value="{{filters.class_name}}" bindinput="onFilterInput" data-field="class_name" />
+          <picker mode="selector" range="{{optionMap.classes}}" range-key="label" data-type="classes" data-field="class_name" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="classes">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="form-label">预警类型</text>
+        <picker range="{{warningTypeOptions}}" value="{{warningTypeIndex}}" bindchange="onWarningTypeChange">
+          <view class="filter-input" style="display: flex; align-items: center; justify-content: space-between;">
+            <text>{{warningTypeOptions[warningTypeIndex]}}</text>
+            <text class="form-picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+    </view>
+    <view class="filter-row filter-actions">
+      <button class="btn-primary btn-small filter-btn" bindtap="onSearch">查询</button>
+      <button wx:if="{{perms.canRefreshWarnings}}" class="btn-warning btn-small filter-btn" bindtap="onRefresh" loading="{{refreshing}}">刷新预警</button>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{warnings.length === 0}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">✅</view>
+    <view>暂无预警</view>
+  </view>
+
+  <!-- 预警列表 -->
+  <view wx:else>
+    <view class="card warning-card-item" wx:for="{{warnings}}" wx:key="index">
+      <view class="flex-between mb-16">
+        <view>
+          <text class="text-bold">{{item.student_name || item.student_id}}</text>
+          <text class="text-muted text-small" style="margin-left: 8rpx;">{{item.student_id}}</text>
+        </view>
+        <text class="tag {{item.warningTagClass}}">{{item.warningTypeName}}</text>
+      </view>
+
+      <view class="warning-detail">
+        <view class="warning-row" wx:if="{{item.class_name}}">
+          <text class="warning-label">班级</text>
+          <text class="warning-value">{{item.class_name}}</text>
+        </view>
+        <view class="warning-row">
+          <text class="warning-label">原因</text>
+          <text class="warning-value">{{item.reason}}</text>
+        </view>
+        <view class="warning-row" wx:if="{{item.courseText}}">
+          <text class="warning-label">相关课程</text>
+          <text class="warning-value">{{item.courseText}}</text>
+        </view>
+        <view class="warning-row" wx:if="{{item.score !== undefined && item.score !== null}}">
+          <text class="warning-label">分数</text>
+          <text class="warning-value text-danger">{{item.score}}</text>
+        </view>
+        <view class="warning-row" wx:if="{{item.avg_score !== undefined && item.avg_score !== null}}">
+          <text class="warning-label">平均分</text>
+          <text class="warning-value">{{item.avgScoreFmt}}</text>
+        </view>
+        <view class="warning-row" wx:if="{{item.warning_type === 'subject_bias'}}">
+          <text class="warning-label">最高科目</text>
+          <text class="warning-value">{{item.maxSubjectText}} ({{item.maxScoreText}})</text>
+        </view>
+        <view class="warning-row" wx:if="{{item.warning_type === 'subject_bias'}}">
+          <text class="warning-label">最低科目</text>
+          <text class="warning-value text-danger">{{item.minSubjectText}} ({{item.minScoreText}})</text>
+        </view>
+        <view class="warning-row" wx:if="{{item.warning_type === 'subject_bias'}}">
+          <text class="warning-label">分差</text>
+          <text class="warning-value text-warning">{{item.biasText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 分页 -->
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{page <= 1}}" bindtap="onPrevPage">上一页</button>
+      <text class="pagination-info">{{page}} / {{totalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{page >= totalPages}}" bindtap="onNextPage">下一页</button>
+    </view>
+  </view>
+</view>

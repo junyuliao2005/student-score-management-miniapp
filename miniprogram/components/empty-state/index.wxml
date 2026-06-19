@@ -1,0 +1,5 @@
+<view class="empty-state">
+  <view class="empty-icon">{{icon || '📭'}}</view>
+  <view class="empty-text">{{text || '暂无数据'}}</view>
+  <view wx:if="{{subText}}" class="empty-sub-text">{{subText}}</view>
+</view>

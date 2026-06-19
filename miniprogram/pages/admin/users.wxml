@@ -1,0 +1,119 @@
+<view class="container">
+  <!-- 操作栏 -->
+  <view class="filter-bar">
+    <view class="filter-row">
+      <button class="btn-success btn-small" bindtap="onAdd">新增用户</button>
+      <button class="btn-primary btn-small" bindtap="onImportUsers">批量导入学生</button>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{users.length === 0}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">👥</view>
+    <view>暂无用户数据</view>
+  </view>
+
+  <!-- 用户列表 -->
+  <view wx:else>
+    <view class="card" wx:for="{{users}}" wx:key="user_id">
+      <view class="flex-between mb-16">
+        <view>
+          <text class="text-bold">{{item.real_name}}</text>
+          <text class="text-muted text-small" style="margin-left: 8rpx;">{{item.user_id}}</text>
+        </view>
+        <text class="tag {{item.status === 1 ? 'tag-excellent' : 'tag-fail'}}">
+          {{item.status === 1 ? '启用' : '停用'}}
+        </text>
+      </view>
+
+      <view class="user-info-grid">
+        <view class="user-info-item">
+          <text class="user-info-label">用户名</text>
+          <text class="user-info-value">{{item.username}}</text>
+        </view>
+        <view class="user-info-item">
+          <text class="user-info-label">角色</text>
+          <text class="user-info-value">{{item.roleNames}}</text>
+        </view>
+        <view class="user-info-item">
+          <text class="user-info-label">班级</text>
+          <text class="user-info-value">{{item.class_name || '-'}}</text>
+        </view>
+      </view>
+
+      <view class="score-actions">
+        <button class="btn-outline btn-small" bindtap="onEdit" data-item="{{item}}">编辑</button>
+      </view>
+    </view>
+
+    <!-- 分页 -->
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{page <= 1}}" bindtap="onPrevPage">上一页</button>
+      <text class="pagination-info">{{page}} / {{totalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{page >= totalPages}}" bindtap="onNextPage">下一页</button>
+    </view>
+  </view>
+
+  <!-- 新增/编辑弹窗 -->
+  <view wx:if="{{showForm}}" class="modal-mask" bindtap="onCloseForm">
+    <view class="modal-content" catchtap="">
+      <view class="card-title">{{formUserId ? '编辑用户' : '新增用户'}}</view>
+
+      <view wx:if="{{!formUserId}}" class="form-group">
+        <text class="form-label">用户ID *</text>
+        <input class="form-input" placeholder="如 S011" value="{{form.user_id}}" bindinput="onFormInput" data-field="user_id" />
+      </view>
+
+      <view wx:if="{{!formUserId}}" class="form-group">
+        <text class="form-label">用户名 *</text>
+        <input class="form-input" placeholder="登录用户名" value="{{form.username}}" bindinput="onFormInput" data-field="username" />
+      </view>
+
+      <view wx:if="{{!formUserId}}" class="form-group">
+        <text class="form-label">密码 *</text>
+        <input class="form-input" placeholder="初始密码" password="true" value="{{form.password}}" bindinput="onFormInput" data-field="password" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">真实姓名 *</text>
+        <input class="form-input" placeholder="真实姓名" value="{{form.real_name}}" bindinput="onFormInput" data-field="real_name" />
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">班级</text>
+        <input class="form-input" placeholder="如 2025级1班" value="{{form.class_name}}" bindinput="onFormInput" data-field="class_name" />
+        <button class="btn-outline btn-small admin-select-btn" bindtap="onPickFormOption" data-type="classes" data-field="class_name">选择班级</button>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">角色</text>
+        <picker range="{{roleOptions}}" value="{{roleIndex}}" bindchange="onRoleChange">
+          <view class="form-picker">
+            <text>{{roleOptions[roleIndex]}}</text>
+            <text class="form-picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="form-group">
+        <text class="form-label">状态</text>
+        <picker range="{{statusOptions}}" value="{{statusIndex}}" bindchange="onStatusChange">
+          <view class="form-picker">
+            <text>{{statusOptions[statusIndex]}}</text>
+            <text class="form-picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="flex-row" style="gap: 16rpx; margin-top: 32rpx;">
+        <button class="btn-primary flex-1" bindtap="onSubmitForm" loading="{{formLoading}}">保存</button>
+        <button class="btn-outline flex-1" bindtap="onCloseForm">取消</button>
+      </view>
+    </view>
+  </view>
+</view>

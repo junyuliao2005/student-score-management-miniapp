@@ -1,0 +1,97 @@
+.grade-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.grade-header {
+  display: flex;
+  background: #fafafa;
+  border-bottom: 2rpx solid #e8e8e8;
+  padding: 16rpx 0;
+}
+
+.grade-row {
+  display: flex;
+  border-bottom: 1rpx solid #f0f0f0;
+  padding: 16rpx 0;
+  align-items: center;
+}
+
+.grade-row:last-child {
+  border-bottom: none;
+}
+
+.grade-cell {
+  font-size: 24rpx;
+  color: #333333;
+  text-align: center;
+  padding: 0 8rpx;
+  box-sizing: border-box;
+}
+
+.grade-header .grade-cell {
+  font-weight: 600;
+  color: #666666;
+  font-size: 22rpx;
+}
+
+.grade-cell-rank {
+  width: 80rpx;
+  flex-shrink: 0;
+}
+
+.grade-cell-name {
+  width: 140rpx;
+  flex-shrink: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grade-cell-score {
+  width: 100rpx;
+  flex-shrink: 0;
+}
+
+.grade-cell-total {
+  width: 100rpx;
+  flex-shrink: 0;
+}
+
+.grade-cell-avg {
+  width: 100rpx;
+  flex-shrink: 0;
+}
+
+.grade-cell-level {
+  width: 120rpx;
+  flex-shrink: 0;
+}
+
+.rank-badge {
+  display: inline-block;
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #666666;
+  font-size: 22rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+.rank-top {
+  background: linear-gradient(135deg, #faad14, #ffc53d);
+  color: #ffffff;
+}
+
+.grade-name {
+  font-weight: 500;
+}
+
+.grade-score {
+  font-weight: 600;
+  color: #1890ff;
+}

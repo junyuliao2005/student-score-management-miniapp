@@ -1,0 +1,30 @@
+<view class="grade-table">
+  <!-- 表头 -->
+  <view class="grade-header">
+    <view class="grade-cell grade-cell-rank">排名</view>
+    <view class="grade-cell grade-cell-name">姓名</view>
+    <view class="grade-cell grade-cell-score">分数</view>
+    <view class="grade-cell grade-cell-total">总分</view>
+    <view class="grade-cell grade-cell-avg">均分</view>
+    <view class="grade-cell grade-cell-level">等级</view>
+  </view>
+
+  <!-- 数据行 -->
+  <view class="grade-row" wx:for="{{list}}" wx:key="score_id">
+    <view class="grade-cell grade-cell-rank">
+      <text class="rank-badge {{item.rank_no <= 3 ? 'rank-top' : ''}}">{{item.rank_no || '-'}}</text>
+    </view>
+    <view class="grade-cell grade-cell-name">
+      <text class="grade-name">{{item.student_name || item.student_id}}</text>
+    </view>
+    <view class="grade-cell grade-cell-score">
+      <text class="grade-score">{{item.score}}</text>
+    </view>
+    <view class="grade-cell grade-cell-total">{{item.totalScoreFmt || '-'}}</view>
+    <view class="grade-cell grade-cell-avg">{{item.avgScoreFmt || '-'}}</view>
+    <view class="grade-cell grade-cell-level">
+      <text wx:if="{{item.level_tag}}" class="tag {{item.levelTagClass}}">{{item.level_tag}}</text>
+      <text wx:else>-</text>
+    </view>
+  </view>
+</view>

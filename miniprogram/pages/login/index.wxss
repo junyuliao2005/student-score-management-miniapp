@@ -1,0 +1,67 @@
+.login-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-top: 80rpx;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 60rpx;
+}
+
+.login-logo {
+  font-size: 96rpx;
+  margin-bottom: 16rpx;
+}
+
+.login-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 12rpx;
+}
+
+.login-subtitle {
+  font-size: 28rpx;
+  color: #999999;
+}
+
+.login-card {
+  margin-bottom: 32rpx;
+}
+
+.test-accounts {
+  background: #fafafa;
+}
+
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.account-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx;
+  background: #ffffff;
+  border-radius: 8rpx;
+}
+
+.account-role {
+  flex-shrink: 0;
+}
+
+.account-info {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+.privacy-link {
+  padding: 24rpx 0 40rpx;
+  text-align: center;
+  color: #1890ff;
+  font-size: 26rpx;
+}

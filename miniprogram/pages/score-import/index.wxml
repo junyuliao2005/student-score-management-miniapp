@@ -1,0 +1,101 @@
+<view class="container">
+  <view class="card">
+    <view class="card-title">Excel 批量导入成绩</view>
+
+    <view class="import-help">
+      <view>支持 .xlsx 文件，第一行必须为表头。</view>
+      <view>确认导入前只解析和校验，不会写入成绩。</view>
+    </view>
+
+    <button
+      class="btn-primary btn-block"
+      bindtap="onChooseFile"
+      loading="{{uploading}}"
+      disabled="{{uploading || confirming}}"
+    >
+      选择 Excel 文件
+    </button>
+
+    <view wx:if="{{fileName}}" class="file-name">
+      已选择：{{fileName}}
+    </view>
+  </view>
+
+  <view wx:if="{{preview}}" class="card">
+    <view class="card-title">预览结果</view>
+
+    <view class="summary-grid">
+      <view class="summary-item">
+        <text class="summary-value">{{preview.total_rows}}</text>
+        <text class="summary-label">总行数</text>
+      </view>
+      <view class="summary-item">
+        <text class="summary-value text-success">{{preview.valid_rows}}</text>
+        <text class="summary-label">可导入</text>
+      </view>
+      <view class="summary-item">
+        <text class="summary-value text-danger">{{preview.error_rows}}</text>
+        <text class="summary-label">错误行</text>
+      </view>
+      <view class="summary-item">
+        <text class="summary-value text-warning">{{preview.duplicate_rows}}</text>
+        <text class="summary-label">重复行</text>
+      </view>
+    </view>
+
+    <button
+      class="btn-success btn-block"
+      bindtap="onConfirmImport"
+      loading="{{confirming}}"
+      disabled="{{confirming || preview.valid_rows <= 0 || importDone}}"
+    >
+      确认导入
+    </button>
+
+    <view wx:if="{{preview.confirmResult}}" class="confirm-result">
+      <view>导入成功：{{preview.confirmResult.inserted_count}} 条</view>
+      <view>跳过：{{preview.confirmResult.skipped_count}} 条</view>
+      <view>错误：{{preview.confirmResult.error_count}} 条</view>
+    </view>
+  </view>
+
+  <view wx:if="{{errorRows.length > 0}}" class="card">
+    <view class="card-title">错误行明细</view>
+    <view class="row-card row-error" wx:for="{{errorRows}}" wx:key="row_no">
+      <view class="row-title">第 {{item.row_no}} 行</view>
+      <view class="row-detail">
+        {{item.student_id || '-'}} / {{item.course_id || '-'}} / {{item.exam_batch || '-'}}
+      </view>
+      <view class="row-errors">{{item.errorText}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{duplicateRows.length > 0}}" class="card">
+    <view class="card-title">重复行</view>
+    <view class="row-card row-duplicate" wx:for="{{duplicateRows}}" wx:key="row_no">
+      <view class="row-title">第 {{item.row_no}} 行</view>
+      <view class="row-detail">
+        {{item.student_id}} / {{item.course_id}} / {{item.exam_batch}}
+      </view>
+      <view class="row-errors">{{item.errorText}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{validRows.length > 0}}" class="card">
+    <view class="card-title">可导入行预览</view>
+    <view class="row-card" wx:for="{{validRows}}" wx:key="row_no">
+      <view class="row-title">第 {{item.row_no}} 行：{{item.student_id}} {{item.student_name || ''}}</view>
+      <view class="row-detail">
+        {{item.course_id}} / {{item.score}} 分 / {{item.exam_date}} / {{item.exam_batch}}
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{errorMsg}}" class="card error-card">
+    <text class="text-danger">{{errorMsg}}</text>
+  </view>
+
+  <view class="text-center mt-32">
+    <button class="btn-outline btn-small" bindtap="onBackToList">返回成绩列表</button>
+  </view>
+</view>

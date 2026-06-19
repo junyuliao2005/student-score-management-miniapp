@@ -1,0 +1,207 @@
+<view class="container">
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <view class="filter-grid">
+      <view class="form-item">
+        <text class="form-label">学期</text>
+        <input class="form-input-solid" placeholder="请输入学期" value="{{filters.term}}" bindinput="onFilterInput" data-field="term" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">班级</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入班级或点击选择" value="{{filters.class_name}}" bindinput="onFilterInput" data-field="class_name" />
+          <picker mode="selector" range="{{optionMap.classes}}" range-key="label" data-type="classes" data-field="class_name" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="classes">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="form-label">考试批次</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入批次或点击选择" value="{{filters.exam_batch}}" bindinput="onFilterInput" data-field="exam_batch" />
+          <picker mode="selector" range="{{optionMap.exam_batches}}" range-key="label" data-type="exam_batches" data-field="exam_batch" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="exam_batches">选择</view>
+          </picker>
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="form-label">课程号/课程名称</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="单科排名必填，可输入语文或 CHN01" value="{{filters.course_id}}" bindinput="onFilterInput" data-field="course_id" />
+          <picker mode="selector" range="{{optionMap.courses}}" range-key="label" data-type="courses" data-field="course_id" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="courses">选择</view>
+          </picker>
+        </view>
+      </view>
+    </view>
+    <view class="filter-row filter-actions">
+      <button class="btn-primary btn-small filter-btn" bindtap="onSearch" loading="{{loading}}" disabled="{{loading}}">查询</button>
+      <button wx:if="{{perms.canRefreshStats}}" class="btn-warning btn-small filter-btn" bindtap="onRefresh" loading="{{refreshing}}">刷新统计</button>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="stats-tabs">
+      <view class="stats-tab {{activeTab === 'overview' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="overview">成绩概览</view>
+      <view class="stats-tab {{activeTab === 'total' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="total">总分排名</view>
+      <view class="stats-tab {{activeTab === 'subject' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="subject">单科排名</view>
+      <view class="stats-tab {{activeTab === 'honor' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="honor">荣誉榜</view>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    加载中...
+  </view>
+
+  <!-- 概览统计 -->
+  <view wx:if="{{activeTab === 'overview' && overview}}" class="card">
+    <view class="card-title">成绩概览</view>
+    <view class="stat-grid">
+      <view class="stat-item">
+        <text class="stat-value">{{overview.student_count}}</text>
+        <text class="stat-label">学生人数</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{overview.score_count}}</text>
+        <text class="stat-label">成绩记录</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{overview.avg_score_fmt}}</text>
+        <text class="stat-label">平均分</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{overview.max_score_fmt}}</text>
+        <text class="stat-label">最高分</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{overview.min_score_fmt}}</text>
+        <text class="stat-label">最低分</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{overview.excellent_rate_fmt}}</text>
+        <text class="stat-label">优秀率</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{overview.pass_rate_fmt}}</text>
+        <text class="stat-label">及格率</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value text-danger">{{overview.low_score_count}}</text>
+        <text class="stat-label">低分人数</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && activeTab !== 'overview' && !filters.exam_batch}}" class="card">
+    <view class="text-center text-muted" style="padding: 24rpx;">
+      请选择考试批次后查看排名和荣誉榜
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && activeTab === 'subject' && filters.exam_batch && !filters.course_id}}" class="card">
+    <view class="text-center text-muted" style="padding: 24rpx;">
+      请先选择课程
+    </view>
+  </view>
+
+  <!-- 排名列表 -->
+  <view wx:if="{{activeTab === 'total' && totalRankings.length > 0}}" class="card">
+    <view class="card-title">总分排名</view>
+    <view class="total-rank-item" wx:for="{{totalRankings}}" wx:key="student_id">
+      <view class="ranking-rank {{item.rankNo <= 3 ? 'ranking-top' : ''}}">{{item.rankNo}}</view>
+      <view class="ranking-info">
+        <view class="ranking-name">{{item.student_name || item.student_id}}</view>
+        <view class="ranking-detail text-muted text-small">{{item.student_id}} | {{item.class_name || '-'}} | {{item.grade_name || '未知年级'}}</view>
+        <view class="subject-line">{{item.subjectText}}</view>
+      </view>
+      <view class="ranking-score">
+        <view class="ranking-total">{{item.totalScoreFmt}}</view>
+        <view class="ranking-avg text-muted text-small">均分 {{item.avgScoreFmt}} / {{item.subject_count}} 科</view>
+        <view class="ranking-avg text-muted text-small">班 {{item.class_rank || '-'}} / 年 {{item.grade_rank || '-'}} / 总 {{item.overall_rank || '-'}}</view>
+      </view>
+    </view>
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{rankPage <= 1 || loading}}" bindtap="onPrevRankPage">上一页</button>
+      <text class="pagination-info">{{rankPage}} / {{rankTotalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{rankPage >= rankTotalPages || loading}}" bindtap="onNextRankPage">下一页</button>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'subject' && subjectRankings.length > 0}}" class="card">
+    <view class="card-title">单科排名</view>
+    <view class="ranking-item" wx:for="{{subjectRankings}}" wx:key="student_id">
+      <view class="ranking-rank {{item.overall_rank <= 3 ? 'ranking-top' : ''}}">{{item.overall_rank}}</view>
+      <view class="ranking-info">
+        <view class="ranking-name">{{item.student_name || item.student_id}}</view>
+        <view class="ranking-detail text-muted text-small">{{item.student_id}} | {{item.class_name || '-'}} | {{item.grade_name || '未知年级'}}</view>
+        <view class="ranking-detail text-muted text-small">{{item.course_name || item.course_id}}</view>
+      </view>
+      <view class="ranking-score">
+        <view class="ranking-total">{{item.scoreFmt}}</view>
+        <view class="ranking-avg text-muted text-small">班 {{item.class_rank || '-'}} / 年 {{item.grade_rank || '-'}} / 总 {{item.overall_rank || '-'}}</view>
+      </view>
+    </view>
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{subjectPage <= 1 || loading}}" bindtap="onPrevRankPage">上一页</button>
+      <text class="pagination-info">{{subjectPage}} / {{subjectTotalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{subjectPage >= subjectTotalPages || loading}}" bindtap="onNextRankPage">下一页</button>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'honor' && honorRoll}}" class="card">
+    <view class="card-title">荣誉榜</view>
+    <view class="honor-section">
+      <view class="honor-title">总分前 10</view>
+      <view class="honor-row" wx:for="{{honorRoll.topTotal}}" wx:key="student_id">
+        <text>{{index + 1}}. {{item.student_name || item.student_id}}</text>
+        <text>{{item.totalScoreFmt}}</text>
+      </view>
+    </view>
+    <view class="honor-section" wx:if="{{honorRoll.subjectBest.length > 0}}">
+      <view class="honor-title">单科第一</view>
+      <view class="honor-row" wx:for="{{honorRoll.subjectBest}}" wx:key="course_id">
+        <text>{{item.course_name}}：{{item.student_name}}</text>
+        <text>{{item.scoreFmt}}</text>
+      </view>
+    </view>
+    <view class="honor-section" wx:if="{{honorRoll.excellentStudents.length > 0}}">
+      <view class="honor-title">优秀学生</view>
+      <view class="honor-row" wx:for="{{honorRoll.excellentStudents}}" wx:key="student_id">
+        <text>{{item.student_name || item.student_id}}</text>
+        <text>均分 {{item.avgScoreFmt}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{false && rankings.length > 0}}" class="card">
+    <view class="card-title">排名列表</view>
+    <view class="ranking-item" wx:for="{{rankings}}" wx:key="student_id">
+      <view class="ranking-rank {{item.rank_no <= 3 ? 'ranking-top' : ''}}">{{item.rank_no}}</view>
+      <view class="ranking-info">
+        <view class="ranking-name">{{item.student_name || item.student_id}}</view>
+        <view class="ranking-detail text-muted text-small">{{item.student_id}} | {{item.class_name || '-'}}</view>
+      </view>
+      <view class="ranking-score">
+        <view class="ranking-total">{{item.totalScoreFmt}}</view>
+        <view class="ranking-avg text-muted text-small">均分 {{item.avgScoreFmt}}</view>
+      </view>
+      <view class="ranking-tag">
+        <text class="tag {{item.levelTagClass}}">{{item.level_tag || '-'}}</text>
+      </view>
+    </view>
+
+    <!-- 排名分页 -->
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{rankPage <= 1}}" bindtap="onPrevRankPage">上一页</button>
+      <text class="pagination-info">{{rankPage}} / {{rankTotalPages}}</text>
+      <button class="btn-outline btn-small" disabled="{{rankPage >= rankTotalPages}}" bindtap="onNextRankPage">下一页</button>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{!loading && activeTab === 'overview' && !overview}}" class="text-center text-muted" style="padding: 80rpx;">
+    <view style="font-size: 64rpx; margin-bottom: 16rpx;">📈</view>
+    <view>暂无统计数据</view>
+  </view>
+</view>

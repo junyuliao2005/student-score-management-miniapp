@@ -1,0 +1,213 @@
+<view class="container">
+  <!-- 试卷分析输入 -->
+  <view class="card">
+    <view class="card-title">试卷考点分析</view>
+
+    <view class="mode-tabs">
+      <view class="mode-tab {{mode === 'text' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="text">文本粘贴分析</view>
+      <view class="mode-tab {{mode === 'image' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="image">图片上传分析</view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">试卷标题 *</text>
+      <view class="input-select-row">
+        <input class="input-select-input" placeholder="请输入标题或点击选择" value="{{title}}" bindinput="onTitleInput" />
+        <picker mode="selector" range="{{optionMap.paper_titles}}" range-key="label" data-type="paper_titles" data-field="title" bindchange="onPickOption">
+          <view class="input-select-btn" bindtap="onPickerTap" data-type="paper_titles">选择</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">学科 *</text>
+      <view class="input-select-row">
+        <input class="input-select-input" placeholder="请输入学科或点击选择" value="{{subject}}" bindinput="onSubjectInput" />
+        <picker mode="selector" range="{{optionMap.subjects}}" range-key="label" data-type="subjects" data-field="subject" bindchange="onPickOption">
+          <view class="input-select-btn" bindtap="onPickerTap" data-type="subjects">选择</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">考试批次{{mode === 'image' ? ' *' : ''}}</text>
+      <view class="input-select-row">
+        <input class="input-select-input" placeholder="请输入批次或点击选择" value="{{examBatch}}" bindinput="onBatchInput" />
+        <picker mode="selector" range="{{optionMap.exam_batches}}" range-key="label" data-type="exam_batches" data-field="examBatch" bindchange="onPickOption">
+          <view class="input-select-btn" bindtap="onPickerTap" data-type="exam_batches">选择</view>
+        </picker>
+      </view>
+    </view>
+
+    <view wx:if="{{mode === 'text'}}" class="form-group">
+      <text class="form-label">试卷文本 *</text>
+      <textarea
+        class="form-textarea"
+        placeholder="请粘贴试卷文本内容..."
+        value="{{paperText}}"
+        bindinput="onPaperTextInput"
+        maxlength="6000"
+        auto-height
+      />
+      <text class="text-muted text-small">{{paperTextLength}}/6000 字</text>
+    </view>
+
+    <button
+      wx:if="{{mode === 'text'}}"
+      class="btn-primary btn-block"
+      bindtap="onAnalyze"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+    >
+      分析考点
+    </button>
+
+    <view wx:if="{{mode === 'image'}}">
+      <view class="form-group">
+        <text class="form-label">试卷图片 *</text>
+        <button class="btn-outline btn-block" bindtap="onChooseImage" disabled="{{loading}}">
+          选择图片
+        </button>
+        <view wx:if="{{imagePath}}" class="image-preview">
+          <image class="paper-image" src="{{imagePath}}" mode="aspectFit" />
+          <view class="image-name">{{imageName}}</view>
+        </view>
+      </view>
+
+      <button
+        class="btn-primary btn-block"
+        bindtap="onAnalyzeImage"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+      >
+        上传并分析
+      </button>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    AI 正在分析试卷...
+  </view>
+
+  <!-- 试卷分析结果 -->
+  <view wx:if="{{paperResult}}">
+    <mock-badge visible="{{paperResult.is_mock}}" text="AI 演示模式" />
+
+    <!-- 图片识别摘要 -->
+    <ai-result-card
+      wx:if="{{paperResult.recognized_summary}}"
+      title="识别摘要"
+      text="{{paperResult.recognized_summary}}"
+    />
+
+    <!-- 主要考点 -->
+    <ai-result-card
+      title="主要考点"
+      items="{{keyPointNames}}"
+    />
+
+    <!-- 知识点分布 -->
+    <ai-result-card
+      title="知识点分布"
+      items="{{paperResult.distribution}}"
+    />
+
+    <!-- 难度判断 -->
+    <ai-result-card
+      title="难度判断"
+      sections="{{difficultySection}}"
+    />
+
+    <!-- 易错点预测 -->
+    <ai-result-card
+      title="易错点预测"
+      items="{{paperResult.error_prone}}"
+    />
+
+    <!-- 复习建议 -->
+    <ai-result-card
+      title="复习建议"
+      items="{{paperResult.review_advice}}"
+    />
+
+    <!-- 元信息 -->
+    <view class="card">
+      <view class="meta-row">
+        <text class="meta-label">试卷ID</text>
+        <text class="meta-value">{{paperResult.paper_id}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">分析ID</text>
+        <text class="meta-value">{{paperResult.analysis_id}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">题目数量</text>
+        <text class="meta-value">{{paperResult.question_count}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">分析引擎</text>
+        <text class="meta-value">{{paperResult.provider}}</text>
+      </view>
+    </view>
+
+    <!-- 联合分析 -->
+    <view class="card">
+      <view class="card-title">个性化复习建议</view>
+      <view class="form-group">
+        <text class="form-label">学号</text>
+        <input class="form-input" placeholder="输入学号生成个性化建议" value="{{combinedStudentId}}" bindinput="onCombinedStudentIdInput" />
+      </view>
+      <button
+        class="btn-success btn-block"
+        bindtap="onCombinedAdvice"
+        loading="{{combinedLoading}}"
+        disabled="{{combinedLoading}}"
+      >
+        生成个性化建议
+      </button>
+    </view>
+  </view>
+
+  <!-- 联合分析结果 -->
+  <view wx:if="{{combinedResult}}">
+    <mock-badge visible="{{combinedResult.is_mock}}" text="AI 演示模式" />
+
+    <ai-result-card
+      title="可能薄弱知识点"
+      items="{{combinedResult.weak_points}}"
+    />
+
+    <ai-result-card
+      title="针对性复习建议"
+      items="{{combinedResult.targeted_advice}}"
+    />
+
+    <view wx:if="{{combinedResult.study_plan}}">
+      <ai-result-card
+        title="短期计划（1周）"
+        text="{{combinedResult.study_plan.short}}"
+      />
+      <ai-result-card
+        title="中期计划（1个月）"
+        text="{{combinedResult.study_plan.medium}}"
+      />
+    </view>
+
+    <ai-result-card
+      title="预期提升方向"
+      text="{{combinedResult.improvement_direction}}"
+    />
+  </view>
+
+  <!-- 错误提示 -->
+  <view wx:if="{{errorMsg}}" class="card" style="border-left: 6rpx solid #ff4d4f;">
+    <text class="text-danger">{{errorMsg}}</text>
+  </view>
+
+  <!-- 返回首页 -->
+  <view class="text-center mt-32">
+    <navigator url="/pages/home/index" open-type="switchTab" class="text-primary">
+      返回首页
+    </navigator>
+  </view>
+</view>

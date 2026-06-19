@@ -1,0 +1,51 @@
+.user-info-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.user-info-item {
+  width: calc(50% - 6rpx);
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.user-info-label {
+  font-size: 24rpx;
+  color: #999999;
+  flex-shrink: 0;
+}
+
+.user-info-value {
+  font-size: 26rpx;
+  color: #333333;
+}
+
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 48rpx;
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.admin-select-btn {
+  margin-top: 12rpx;
+}

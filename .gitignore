@@ -1,0 +1,43 @@
+# secrets and local config
+.env
+*.env.local
+backend/.env
+backend/.env.*.local
+project.private.config.json
+miniprogram/project.private.config.json
+
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.envrc
+.pytest_cache/
+
+# node / wechat build
+node_modules/
+dist/
+build/
+npm-debug.log*
+
+# runtime files
+*.log
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+temp/
+tmp/
+
+# private datasets: keep demo data only if explicitly sanitized
+*.xlsx
+*.xls
+!docs/demo_data.xlsx
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

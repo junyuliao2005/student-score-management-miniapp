@@ -1,0 +1,110 @@
+<view class="container">
+  <!-- 输入区域 -->
+  <view class="card">
+    <view class="card-title">AI 班级学情分析</view>
+
+    <view class="form-group">
+      <text class="form-label">班级名称</text>
+      <view wx:if="{{classesLoading}}" class="class-picker class-picker-disabled">
+        班级列表加载中...
+      </view>
+      <view wx:else class="input-select-row">
+        <input
+          class="input-select-input"
+          placeholder="请输入班级或点击选择"
+          value="{{className}}"
+          bindinput="onClassInput"
+        />
+        <picker
+          mode="selector"
+          range="{{classOptions}}"
+          range-key="label"
+          value="{{classIndex}}"
+          bindchange="onClassChange"
+        >
+          <view class="input-select-btn" bindtap="onClassPickerTap">选择</view>
+        </picker>
+      </view>
+      <view wx:if="{{!classesLoading && classOptions.length === 0}}" class="class-empty">
+        暂无班级数据，可手动输入
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">学期</text>
+      <input
+        class="form-input"
+        placeholder="如 2025-2026-2"
+        value="{{term}}"
+        bindinput="onTermInput"
+      />
+    </view>
+
+    <button
+      class="btn-primary btn-block"
+      bindtap="onGenerate"
+      loading="{{loading}}"
+      disabled="{{loading || classesLoading}}"
+    >
+      生成班级分析
+    </button>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
+    AI 正在分析中...
+  </view>
+
+  <!-- 结果展示 -->
+  <view wx:if="{{result}}">
+    <mock-badge visible="{{result.is_mock}}" text="AI 演示模式" />
+
+    <!-- 班级整体表现 -->
+    <ai-result-card
+      title="班级整体表现"
+      text="{{result.overall}}"
+    />
+
+    <!-- 共性问题 -->
+    <ai-result-card
+      title="共性问题"
+      items="{{result.problems}}"
+    />
+
+    <!-- 教学改进建议 -->
+    <ai-result-card
+      title="教学改进建议"
+      items="{{result.teaching_advice}}"
+    />
+
+    <!-- 重点关注学生 -->
+    <ai-result-card
+      title="重点关注学生"
+      items="{{result.focus_students}}"
+    />
+
+    <!-- 元信息 -->
+    <view class="card">
+      <view class="meta-row">
+        <text class="meta-label">分析ID</text>
+        <text class="meta-value">{{result.analysis_id}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">分析引擎</text>
+        <text class="meta-value">{{result.provider}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 错误提示 -->
+  <view wx:if="{{errorMsg}}" class="card" style="border-left: 6rpx solid #ff4d4f;">
+    <text class="text-danger">{{errorMsg}}</text>
+  </view>
+
+  <!-- 返回首页 -->
+  <view class="text-center mt-32">
+    <navigator url="/pages/home/index" open-type="switchTab" class="text-primary">
+      返回首页
+    </navigator>
+  </view>
+</view>

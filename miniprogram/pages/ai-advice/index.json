@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "AI 学习建议",
+  "usingComponents": {
+    "mock-badge": "/components/mock-badge/index",
+    "ai-result-card": "/components/ai-result-card/index"
+  }
+}

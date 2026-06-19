@@ -1,0 +1,28 @@
+<view class="container">
+  <view class="card">
+    <view class="card-title">家长端</view>
+    <view class="text-muted">欢迎，{{user.real_name || '家长'}}</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">加载中...</view>
+
+  <view wx:elif="{{errorText}}" class="card">
+    <view class="text-center text-muted">{{errorText}}</view>
+    <button class="btn-primary btn-block mt-16" bindtap="loadChildren">重试</button>
+  </view>
+
+  <view wx:elif="{{children.length === 0}}" class="card">
+    <view class="text-center text-muted">暂无绑定孩子，请联系管理员绑定学生。</view>
+  </view>
+
+  <view wx:else class="card">
+    <view class="card-title">已绑定孩子</view>
+    <view wx:for="{{children}}" wx:key="student_id" class="child-row" bindtap="onChildTap" data-id="{{item.student_id}}">
+      <view>
+        <view class="text-bold">{{item.student_name}}</view>
+        <view class="text-muted text-small">{{item.student_id}} | {{item.class_name || '-'}}</view>
+      </view>
+      <view class="text-primary">查看成绩</view>
+    </view>
+  </view>
+</view>

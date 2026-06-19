@@ -1,0 +1,167 @@
+.filter-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.form-item {
+  width: 100%;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 28rpx;
+  color: #333333;
+}
+
+.input-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  width: 100%;
+}
+
+.input-select-input {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #dddddd;
+  border-radius: 10rpx;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-size: 26rpx;
+}
+
+.input-select-btn {
+  width: 140rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  border: 1rpx solid #1890ff;
+  color: #1890ff;
+  border-radius: 10rpx;
+  background: #ffffff;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+.search-toggle {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 0 20rpx;
+}
+
+.search-summary {
+  flex: 1;
+  min-width: 0;
+  color: #666666;
+  font-size: 24rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-score-main {
+  text-align: center;
+  padding: 24rpx 0;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12rpx;
+}
+
+.summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx 24rpx;
+  color: #666666;
+  font-size: 24rpx;
+  line-height: 1.5;
+  margin-bottom: 16rpx;
+}
+
+.summary-item {
+  text-align: center;
+  padding: 16rpx 8rpx;
+  background: #f7f8fa;
+  border-radius: 8rpx;
+}
+
+.summary-value {
+  display: block;
+  color: #1890ff;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.summary-label {
+  display: block;
+  color: #999999;
+  font-size: 22rpx;
+  margin-top: 6rpx;
+}
+
+.summary-subjects {
+  color: #666666;
+  font-size: 24rpx;
+  line-height: 1.6;
+  margin-top: 16rpx;
+}
+
+.weak-tip {
+  color: #ad6800;
+  font-size: 24rpx;
+  line-height: 1.5;
+  margin-top: 16rpx;
+  padding: 14rpx 18rpx;
+  background: #fff7e6;
+  border-radius: 8rpx;
+}
+
+.my-score-value {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #1890ff;
+}
+
+.my-score-label {
+  font-size: 24rpx;
+  color: #999999;
+  margin-top: 4rpx;
+}
+
+.my-stats-row {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.my-stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.my-stat-label {
+  font-size: 22rpx;
+  color: #999999;
+  display: block;
+}
+
+.my-stat-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+  display: block;
+  margin-top: 4rpx;
+}
+
+.my-comment {
+  padding: 12rpx 0;
+}
