@@ -61,6 +61,7 @@
       <button class="btn-primary btn-small filter-btn" bindtap="onSearch">查询</button>
       <button class="btn-outline btn-small filter-btn" bindtap="onReset">重置</button>
       <button wx:if="{{perms.canCreateScore}}" class="btn-success btn-small filter-btn" bindtap="onAdd">新增</button>
+      <button class="btn-outline btn-small filter-btn" bindtap="onExportScores">批量导出</button>
     </view>
   </view>
 

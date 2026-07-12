@@ -1,4 +1,5 @@
-const { BASE_URL, post } = require('../../../utils/request');
+const { post } = require('../../../utils/request');
+const upload = require('../../../utils/upload');
 const auth = require('../../../utils/auth');
 
 Page({
@@ -51,39 +52,24 @@ Page({
           importDone: false,
           errorMsg: '',
         });
-        this.uploadPreview(file.path);
+        this.uploadPreview(file.path, file.name);
       },
     });
   },
 
-  uploadPreview(filePath) {
-    const token = wx.getStorageSync('token') || '';
+  uploadPreview(filePath, fileName) {
     this.setData({ uploading: true, errorMsg: '' });
-
-    // TODO: 体验版普通接口已切换 callContainer，文件上传后续可改为云存储上传后再调用后端解析，
-    // 或绑定自定义域名后继续使用 wx.uploadFile。
-    wx.uploadFile({
-      url: `${BASE_URL}/api/users/import/preview`,
-      filePath: filePath,
-      name: 'file',
-      header: {
-        Authorization: token ? `Bearer ${token}` : '',
-      },
-      success: (res) => {
-        let body = null;
-        try {
-          body = JSON.parse(res.data);
-        } catch (err) {
-          this.setData({ errorMsg: '导入预览响应解析失败' });
-          return;
-        }
-
-        if (res.statusCode !== 200 || body.code !== 0) {
-          this.setData({ errorMsg: body.message || `导入预览失败(${res.statusCode})` });
-          return;
-        }
-
-        const preview = body.data || {};
+    const task = upload.uploadFile({
+      filePath,
+      fileName,
+      fieldName: 'file',
+      localPath: '/api/users/import/preview',
+      cloudPath: '/api/uploads/cloud/users/import/preview',
+      cloudKind: 'user-imports',
+    });
+    task.promise
+      .then((data) => {
+        const preview = data || {};
         const rows = (preview.rows || []).map((row) => ({
           ...row,
           errorText: (Array.isArray(row.errors) ? row.errors : []).join('；'),
@@ -97,14 +83,13 @@ Page({
           importDone: false,
         });
         wx.showToast({ title: '预览完成', icon: 'success' });
-      },
-      fail: () => {
-        this.setData({ errorMsg: '文件上传失败，请检查网络' });
-      },
-      complete: () => {
+      })
+      .catch((err) => {
+        this.setData({ errorMsg: err.message || '文件上传失败，请检查网络' });
+      })
+      .finally(() => {
         this.setData({ uploading: false });
-      },
-    });
+      });
   },
 
   onConfirmImport() {

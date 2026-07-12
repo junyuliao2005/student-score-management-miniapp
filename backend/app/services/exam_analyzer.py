@@ -16,6 +16,7 @@ from app.models.course import Course
 from app.services import ai_provider
 from app.services import ai_mock_service
 from app.services import ai_prompt_builder
+from app.services import ai_result_schema
 from app.utils.text_sanitizer import sanitize_input
 from app.utils.errors import BusinessError, ErrorCode
 
@@ -54,8 +55,9 @@ def analyze_paper(title, subject, exam_batch, paper_text, operator_id, trace_id)
     api_result = ai_provider.call_ai_api(prompt)
     duration_ms = int((time.time() - start_time) * 1000)
 
+    usage = None
     if api_result is not None:
-        result_text, duration_ms, token_used = api_result
+        result_text, duration_ms, usage = api_result
         provider_info = ai_provider.get_provider_info()
         try:
             result_data = json.loads(result_text)
@@ -65,9 +67,10 @@ def analyze_paper(title, subject, exam_batch, paper_text, operator_id, trace_id)
         result_data = ai_mock_service.generate_exam_analysis(
             title.strip(), subject.strip(), cleaned_text, question_count
         )
-        result_text = json.dumps(result_data, ensure_ascii=False, indent=2)
         provider_info = ai_provider.get_mock_provider_info()
-        token_used = None
+    result_data = ai_result_schema.normalize_ai_result('exam_paper', result_data)
+    result_text = json.dumps(result_data, ensure_ascii=False, indent=2)
+    token_used = ai_provider.total_tokens(usage)
 
     # 保存试卷记录
     paper = ExamPaper(
@@ -111,10 +114,7 @@ def analyze_paper(title, subject, exam_batch, paper_text, operator_id, trace_id)
 
     result_data['paper_id'] = paper.paper_id
     result_data['analysis_id'] = record.analysis_id
-    result_data['provider'] = provider_info['provider']
-    result_data['is_mock'] = provider_info['is_mock']
-
-    return result_data
+    return ai_provider.attach_result_metadata(result_data, provider_info, usage, trace_id)
 
 
 def generate_combined_advice(student_id, paper_id, term, operator_id, trace_id):
@@ -169,16 +169,23 @@ def generate_combined_advice(student_id, paper_id, term, operator_id, trace_id):
     api_result = ai_provider.call_ai_api(prompt)
     duration_ms = int((time.time() - start_time) * 1000)
 
+    usage = None
     if api_result is not None:
-        result_text, duration_ms, token_used = api_result
+        result_text, duration_ms, usage = api_result
         provider_info = ai_provider.get_provider_info()
+        try:
+            result_data = json.loads(result_text)
+        except json.JSONDecodeError:
+            result_data = {'raw_text': result_text}
     else:
         mock_result = ai_mock_service.generate_combined_advice(
             student.real_name, scores_data, key_points, paper.title
         )
-        result_text = json.dumps(mock_result, ensure_ascii=False, indent=2)
+        result_data = mock_result
         provider_info = ai_provider.get_mock_provider_info()
-        token_used = None
+    result_data = ai_result_schema.normalize_ai_result('combined_advice', result_data)
+    result_text = json.dumps(result_data, ensure_ascii=False, indent=2)
+    token_used = ai_provider.total_tokens(usage)
 
     # 保存记录
     record = AiAnalysis(
@@ -198,16 +205,8 @@ def generate_combined_advice(student_id, paper_id, term, operator_id, trace_id):
     db.session.add(record)
     db.session.commit()
 
-    try:
-        result_data = json.loads(result_text)
-    except json.JSONDecodeError:
-        result_data = {'raw_text': result_text}
-
     result_data['analysis_id'] = record.analysis_id
-    result_data['provider'] = provider_info['provider']
-    result_data['is_mock'] = provider_info['is_mock']
-
-    return result_data
+    return ai_provider.attach_result_metadata(result_data, provider_info, usage, trace_id)
 
 
 def _estimate_question_count(text):

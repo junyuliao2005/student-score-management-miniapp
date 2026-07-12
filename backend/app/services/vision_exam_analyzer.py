@@ -9,6 +9,7 @@ from app.extensions import db
 from app.models.ai_analysis import AiAnalysis
 from app.models.exam_paper import ExamPaper
 from app.services import ai_provider
+from app.services import ai_result_schema
 from app.utils.errors import BusinessError, ErrorCode
 from app.utils.file_validator import validate_image_file
 from app.utils.privacy_sanitizer import mask_sensitive_text
@@ -38,8 +39,9 @@ def analyze_image(title, subject, exam_batch, image_file, operator_id, trace_id)
     api_result = ai_provider.call_vision_ai_api(prompt, image_bytes, image_info['mimetype'])
     duration_ms = int((time.time() - start_time) * 1000)
 
+    usage = None
     if api_result is not None:
-        result_text, duration_ms, token_used = api_result
+        result_text, duration_ms, usage = api_result
         provider_info = ai_provider.get_vision_provider_info()
         try:
             result_data = json.loads(result_text)
@@ -47,9 +49,10 @@ def analyze_image(title, subject, exam_batch, image_file, operator_id, trace_id)
             result_data = {'recognized_summary': result_text}
     else:
         result_data = _generate_mock_result(title, subject, exam_batch, image_info)
-        result_text = json.dumps(result_data, ensure_ascii=False, indent=2)
         provider_info = ai_provider.get_mock_provider_info()
-        token_used = None
+    result_data = ai_result_schema.normalize_ai_result('exam_paper_image', result_data)
+    result_text = json.dumps(result_data, ensure_ascii=False, indent=2)
+    token_used = ai_provider.total_tokens(usage)
 
     paper = ExamPaper(
         title=title,
@@ -93,9 +96,7 @@ def analyze_image(title, subject, exam_batch, image_file, operator_id, trace_id)
 
     result_data['paper_id'] = paper.paper_id
     result_data['analysis_id'] = record.analysis_id
-    result_data['provider'] = provider_info['provider']
-    result_data['is_mock'] = provider_info['is_mock']
-    return result_data
+    return ai_provider.attach_result_metadata(result_data, provider_info, usage, trace_id)
 
 
 def _build_vision_prompt(title, subject, exam_batch, image_info):

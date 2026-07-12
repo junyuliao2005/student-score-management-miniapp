@@ -6,8 +6,9 @@ from app.models.course import Course
 from app.models.message import Message
 from app.models.role import Role
 from app.models.score import Score
+from app.models.teacher_binding import TeacherClassBinding
 from app.models.user import User
-from app.services import audit_service
+from app.services import audit_service, teacher_scope_service
 from app.utils.errors import BusinessError, ErrorCode
 from app.utils.validators import validate_pagination
 
@@ -88,6 +89,11 @@ def create_message(payload, current_user, trace_id):
         raise BusinessError(ErrorCode.STUDENT_NOT_FOUND, '接收人不存在或已停用')
 
     _validate_sender_receiver(sender, receiver, roles)
+
+    if 'teacher' in roles and 'admin' not in roles:
+        teacher_scope_service.ensure_access(
+            current_user, student_id=receiver_id, course_id=course_id,
+        )
 
     if course_id and not Course.query.filter_by(course_id=course_id, status=1).first():
         raise BusinessError(ErrorCode.COURSE_NOT_FOUND, '课程不存在或已停用')
@@ -179,7 +185,16 @@ def mark_all_read(current_user, trace_id):
 def list_contacts(current_user):
     roles = current_user.get('roles', [])
     if 'student' in roles and 'teacher' not in roles and 'admin' not in roles:
-        teachers = User.query.filter(User.status == 1, User.roles.any(Role.role_name == 'teacher')) \
+        student_class = db.session.query(User.class_name).filter(User.user_id == current_user.get('user_id')).scalar()
+        teacher_ids = db.session.query(TeacherClassBinding.teacher_id).filter(
+            TeacherClassBinding.class_name == student_class,
+            TeacherClassBinding.status == 1,
+        )
+        teachers = User.query.filter(
+            User.status == 1,
+            User.user_id.in_(teacher_ids),
+            User.roles.any(Role.role_name == 'teacher'),
+        ) \
             .order_by(User.user_id).all()
         admins = User.query.filter(User.status == 1, User.roles.any(Role.role_name == 'admin')) \
             .order_by(User.user_id).all()
@@ -188,8 +203,11 @@ def list_contacts(current_user):
             'teachers': [_contact_dict(u) for u in teachers + admins],
         }
 
-    students = User.query.filter(User.status == 1, User.roles.any(Role.role_name == 'student')) \
-        .order_by(User.user_id).all()
+    students_query = User.query.filter(User.status == 1, User.roles.any(Role.role_name == 'student'))
+    if 'teacher' in roles and 'admin' not in roles:
+        class_names = teacher_scope_service.get_scope(current_user)['class_names']
+        students_query = students_query.filter(User.class_name.in_(class_names))
+    students = students_query.order_by(User.user_id).all()
     teachers = User.query.filter(User.status == 1, User.roles.any(Role.role_name == 'teacher')) \
         .order_by(User.user_id).all()
     return {

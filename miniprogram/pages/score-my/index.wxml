@@ -50,6 +50,18 @@
       {{filterExpanded ? '收起筛选' : '筛选/搜索'}}
     </button>
     <text class="search-summary">{{filters.term || '未选学期'}} | {{filters.exam_batch || '未选批次'}}<text wx:if="{{filters.course_id || filters.course_name}}"> | {{filters.course_id || filters.course_name}}</text></text>
+    <button class="btn-outline btn-small" bindtap="onExportPdf">PDF 报告</button>
+    <button class="btn-outline btn-small" loading="{{trendLoading}}" bindtap="onLoadTrend">{{showTrend ? '收起趋势' : '成绩趋势'}}</button>
+  </view>
+
+  <view wx:if="{{showTrend}}" class="card">
+    <view class="card-title">已发布成绩趋势</view>
+    <view wx:if="{{trendSeries.length === 0}}" class="text-center text-muted">暂无可展示趋势</view>
+    <view class="my-trend-row" wx:for="{{trendSeries}}" wx:key="exam_batch">
+      <view class="my-trend-label">{{item.exam_batch}}</view>
+      <view class="my-trend-track"><view class="my-trend-bar" style="width: {{item.width}}%;"></view></view>
+      <view class="my-trend-value">{{item.scoreFmt}}</view>
+    </view>
   </view>
 
   <!-- 筛选 -->

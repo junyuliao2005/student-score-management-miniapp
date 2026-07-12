@@ -6,9 +6,12 @@ from app.extensions import db
 from app.services import ai_service
 from app.services import exam_analyzer
 from app.services import vision_exam_analyzer
+from app.services import ocr_service
 from app.services import audit_service
+from app.services import teacher_scope_service
 from app.utils.response import success
 from app.utils.errors import BusinessError, ErrorCode
+from app.utils.upload_security import check_upload_rate_limit
 
 ai_bp = Blueprint('ai', __name__)
 
@@ -44,12 +47,15 @@ def student_advice():
 
     if not student_id:
         raise BusinessError(ErrorCode.STUDENT_NOT_FOUND, '请指定学生ID')
+    if 'teacher' in roles and 'admin' not in roles:
+        teacher_scope_service.ensure_access(g.current_user, student_id=student_id)
 
     result = ai_service.generate_student_advice(
         student_id=student_id,
         term=term,
         operator_id=g.current_user['user_id'],
         trace_id=getattr(request, 'trace_id', ''),
+        current_user=g.current_user,
     )
 
     audit_service.write(
@@ -82,6 +88,7 @@ def class_overview():
         class_name=class_name,
         operator_id=g.current_user['user_id'],
         trace_id=getattr(request, 'trace_id', ''),
+        current_user=g.current_user,
     )
 
     audit_service.write(
@@ -138,6 +145,7 @@ def exam_paper_analyze():
 @permission_required('ai:exam_analyze')
 def exam_paper_analyze_image():
     """试卷图片考点分析（视觉 mock MVP）"""
+    check_upload_rate_limit(g.current_user['user_id'], 'exam_image_analyze', limit=6, window_seconds=60)
     title = request.form.get('title')
     subject = request.form.get('subject')
     exam_batch = request.form.get('exam_batch')
@@ -162,6 +170,38 @@ def exam_paper_analyze_image():
     )
     db.session.commit()
 
+    return success(result)
+
+
+@ai_bp.route('/api/ai/exam-paper/ocr-preview', methods=['POST'])
+@jwt_required
+@permission_required('ai:exam_analyze')
+def exam_paper_ocr_preview():
+    """安全解码图片并返回可编辑 OCR 文字，不直接调用外部 AI。"""
+    check_upload_rate_limit(g.current_user['user_id'], 'exam_ocr_preview', limit=6, window_seconds=60)
+    result = ocr_service.preview_image(
+        image_file=request.files.get('image'),
+        operator_id=g.current_user['user_id'],
+        trace_id=getattr(request, 'trace_id', ''),
+    )
+    return success(result)
+
+
+@ai_bp.route('/api/ai/exam-paper/analyze-ocr', methods=['POST'])
+@jwt_required
+@permission_required('ai:exam_analyze')
+def exam_paper_analyze_ocr():
+    """使用用户确认/修正后的 OCR 文本进行结构化试卷分析。"""
+    data = request.get_json(force=True) if request.data else {}
+    result = ocr_service.analyze_confirmed(
+        ocr_id=data.get('ocr_id'),
+        title=data.get('title'),
+        subject=data.get('subject'),
+        exam_batch=data.get('exam_batch'),
+        corrected_text=data.get('corrected_text'),
+        operator_id=g.current_user['user_id'],
+        trace_id=getattr(request, 'trace_id', ''),
+    )
     return success(result)
 
 
@@ -232,3 +272,16 @@ def history():
     )
 
     return success(result)
+
+
+@ai_bp.route('/api/ai/history/<int:analysis_id>/feedback', methods=['POST'])
+@jwt_required
+def feedback(analysis_id):
+    data = request.get_json(force=True) if request.data else {}
+    return success(ai_service.submit_feedback(
+        analysis_id=analysis_id,
+        rating=data.get('rating'),
+        comment=data.get('comment'),
+        current_user=g.current_user,
+        trace_id=getattr(request, 'trace_id', ''),
+    ))

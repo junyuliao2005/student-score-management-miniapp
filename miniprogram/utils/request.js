@@ -8,14 +8,16 @@ const BASE_URL = env.BASE_URL;
 const CLOUD_BASE_URL = env.CLOUD_BASE_URL || env.BASE_URL;
 const CLOUD_ENV = env.CLOUD_ENV;
 const CONTAINER_SERVICE = env.CONTAINER_SERVICE;
-const REQUEST_MODE = env.REQUEST_MODE || 'local';
 
 function isFullUrl(url) {
   return /^https?:\/\//i.test(url);
 }
 
 function isCloudMode() {
-  return REQUEST_MODE === 'cloud';
+  const mode = typeof env.getRequestMode === 'function'
+    ? env.getRequestMode()
+    : env.REQUEST_MODE;
+  return mode === 'cloud';
 }
 
 function getActiveBaseUrl() {

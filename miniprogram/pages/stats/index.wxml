@@ -6,6 +6,15 @@
         <text class="form-label">学期</text>
         <input class="form-input-solid" placeholder="请输入学期" value="{{filters.term}}" bindinput="onFilterInput" data-field="term" />
       </view>
+      <view wx:if="{{activeTab === 'progress'}}" class="form-item">
+        <text class="form-label">基准考试批次</text>
+        <view class="input-select-row">
+          <input class="input-select-input" placeholder="请输入或选择基准批次" value="{{filters.baseline_batch}}" bindinput="onFilterInput" data-field="baseline_batch" />
+          <picker mode="selector" range="{{optionMap.exam_batches}}" range-key="label" data-type="exam_batches" data-field="baseline_batch" bindchange="onPickFilter">
+            <view class="input-select-btn" bindtap="onPickerTap" data-type="exam_batches">选择</view>
+          </picker>
+        </view>
+      </view>
       <view class="form-item">
         <text class="form-label">班级</text>
         <view class="input-select-row">
@@ -46,6 +55,10 @@
       <view class="stats-tab {{activeTab === 'total' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="total">总分排名</view>
       <view class="stats-tab {{activeTab === 'subject' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="subject">单科排名</view>
       <view class="stats-tab {{activeTab === 'honor' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="honor">荣誉榜</view>
+      <view class="stats-tab {{activeTab === 'trend' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="trend">成绩趋势</view>
+      <view class="stats-tab {{activeTab === 'distribution' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="distribution">分数段</view>
+      <view class="stats-tab {{activeTab === 'progress' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="progress">进步榜</view>
+      <view class="stats-tab {{activeTab === 'bias' ? 'stats-tab-active' : ''}}" bindtap="onTabChange" data-tab="bias">偏科分析</view>
     </view>
   </view>
 
@@ -172,6 +185,52 @@
         <text>均分 {{item.avgScoreFmt}}</text>
       </view>
     </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'trend' && trendSeries.length > 0}}" class="card">
+    <view class="card-title">班级成绩趋势</view>
+    <view class="chart-row" wx:for="{{trendSeries}}" wx:key="exam_batch">
+      <view class="chart-label">{{item.exam_batch}}</view>
+      <view class="chart-track"><view class="chart-bar trend-bar" style="width: {{item.width}}%;"></view></view>
+      <view class="chart-value">{{item.scoreFmt}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'distribution' && distribution}}" class="card">
+    <view class="card-title">分数段（{{distribution.total}} 条）</view>
+    <view class="chart-row" wx:for="{{distribution.segments}}" wx:key="label">
+      <view class="chart-label">{{item.label}}</view>
+      <view class="chart-track"><view class="chart-bar" style="width: {{item.width}}%;"></view></view>
+      <view class="chart-value">{{item.count}} / {{item.rateFmt}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'progress' && progressRankings.length > 0}}" class="card">
+    <view class="card-title">进步榜</view>
+    <view class="ranking-item" wx:for="{{progressRankings}}" wx:key="student_id">
+      <view class="ranking-rank {{item.rank_no <= 3 ? 'ranking-top' : ''}}">{{item.rank_no}}</view>
+      <view class="ranking-info">
+        <view class="ranking-name">{{item.student_name || item.student_id}}</view>
+        <view class="ranking-detail text-muted text-small">{{item.class_name || '-'}}：{{item.baselineFmt}} → {{item.currentFmt}}</view>
+      </view>
+      <view class="progress-delta {{item.delta >= 0 ? 'delta-positive' : 'delta-negative'}}">{{item.deltaFmt}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'bias' && biasItems.length > 0}}" class="card">
+    <view class="card-title">偏科分析</view>
+    <view class="bias-item" wx:for="{{biasItems}}" wx:key="student_id">
+      <view class="ranking-name">{{item.student_name || item.student_id}}</view>
+      <view class="ranking-detail">最高：{{item.highestText}}</view>
+      <view class="ranking-detail">最低：{{item.lowestText}}</view>
+      <view class="bias-gap">差值 {{item.gapFmt}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{(activeTab === 'progress' || activeTab === 'bias') && rankTotalPages > 0}}" class="pagination">
+    <button class="btn-outline btn-small" disabled="{{rankPage <= 1 || loading}}" bindtap="onPrevRankPage">上一页</button>
+    <text class="pagination-info">{{rankPage}} / {{rankTotalPages}}</text>
+    <button class="btn-outline btn-small" disabled="{{rankPage >= rankTotalPages || loading}}" bindtap="onNextRankPage">下一页</button>
   </view>
 
   <view wx:if="{{false && rankings.length > 0}}" class="card">

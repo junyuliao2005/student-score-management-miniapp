@@ -5,6 +5,7 @@ from app.models.exam_paper import ExamPaper
 from app.models.role import Role
 from app.models.score import Score
 from app.models.user import User
+from app.services import teacher_scope_service
 from app.utils.errors import BusinessError, ErrorCode
 
 DEFAULT_SUBJECTS = ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治', '计算机基础']
@@ -22,6 +23,8 @@ def get_options(option_type, current_user):
 
     if _is_student_only(roles):
         values = _student_options(option_type, user_id)
+    elif 'teacher' in roles and 'admin' not in roles:
+        values = _teacher_options(option_type, current_user)
     else:
         values = _staff_options(option_type)
 
@@ -98,6 +101,56 @@ def _staff_options(option_type):
     if option_type == 'paper_titles':
         titles = db.session.query(ExamPaper.title).filter(ExamPaper.title.isnot(None)).distinct().all()
         return _merge_defaults([(row[0], row[0]) for row in titles if row[0]], DEFAULT_PAPER_TITLES)
+    return []
+
+
+def _teacher_options(option_type, current_user):
+    scope = teacher_scope_service.get_scope(current_user)
+    class_names = scope['class_names']
+    course_ids = scope['course_ids']
+
+    if option_type in ('students', 'student_names'):
+        users = User.query.filter(
+            User.status == 1,
+            User.class_name.in_(class_names),
+            User.roles.any(Role.role_name == 'student'),
+        )
+        if option_type == 'students':
+            users = users.order_by(User.user_id).all()
+            return [(f'{u.real_name}（{u.user_id}）', u.user_id) for u in users]
+        users = users.order_by(User.real_name).all()
+        return _unique_pairs((u.real_name, u.real_name) for u in users)
+    if option_type == 'teachers':
+        return _staff_options(option_type)
+    if option_type == 'classes':
+        rows = db.session.query(User.class_name).filter(
+            User.status == 1,
+            User.class_name.in_(class_names),
+        ).distinct().order_by(User.class_name).all()
+        return [(row.class_name, row.class_name) for row in rows]
+    if option_type in ('courses', 'course_ids'):
+        courses = Course.query.filter(
+            Course.status == 1,
+            Course.course_id.in_(course_ids),
+        ).order_by(Course.course_id).all()
+        if option_type == 'courses':
+            return [(f'{c.course_name}（{c.course_id}）', c.course_id) for c in courses]
+        return [(c.course_id, c.course_id) for c in courses]
+    if option_type == 'terms':
+        rows = db.session.query(Course.term).filter(
+            Course.status == 1,
+            Course.course_id.in_(course_ids),
+        ).distinct().all()
+        return _unique_pairs((row.term, row.term) for row in rows if row.term)
+    if option_type == 'exam_batches':
+        rows = db.session.query(Score.exam_batch).filter(
+            Score.status == 1,
+            Score.course_id.in_(course_ids),
+            Score.student_id.in_(db.session.query(User.user_id).filter(User.class_name.in_(class_names))),
+        ).distinct().all()
+        return _unique_pairs((row.exam_batch, row.exam_batch) for row in rows if row.exam_batch)
+    if option_type in ('subjects', 'paper_titles'):
+        return _staff_options(option_type)
     return []
 
 

@@ -87,6 +87,22 @@
   word-break: break-all;
 }
 
+.ocr-status,
+.ocr-preview {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border: 1rpx solid #d9d9d9;
+  border-radius: 8rpx;
+  background: #fafafa;
+}
+
+.ocr-warning {
+  margin-top: 10rpx;
+  color: #ad6800;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
 .meta-row {
   display: flex;
   align-items: baseline;

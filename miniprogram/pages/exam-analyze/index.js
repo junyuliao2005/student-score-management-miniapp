@@ -1,4 +1,5 @@
-const { BASE_URL, post } = require('../../utils/request');
+const { post } = require('../../utils/request');
+const upload = require('../../utils/upload');
 const options = require('../../utils/options');
 
 Page({
@@ -11,6 +12,11 @@ Page({
     paperTextLength: 0,
     imagePath: '',
     imageName: '',
+    uploadProgress: 0,
+    ocrPreview: null,
+    ocrText: '',
+    ocrTextLength: 0,
+    ocrStage: '',
     optionMap: {},
     loading: false,
     paperResult: null,
@@ -104,6 +110,11 @@ Page({
       this.setData({
         imagePath: path,
         imageName: name || '试卷图片',
+        uploadProgress: 0,
+        ocrPreview: null,
+        ocrText: '',
+        ocrTextLength: 0,
+        ocrStage: '',
         paperResult: null,
         combinedResult: null,
         errorMsg: '',
@@ -193,47 +204,77 @@ Page({
       return;
     }
 
-    const token = wx.getStorageSync('token') || '';
-    this.setData({ loading: true, paperResult: null, combinedResult: null, errorMsg: '' });
-
-    // TODO: 体验版普通接口已切换 callContainer，文件上传后续可改为云存储上传后再调用后端解析，
-    // 或绑定自定义域名后继续使用 wx.uploadFile。
-    wx.uploadFile({
-      url: `${BASE_URL}/api/ai/exam-paper/analyze-image`,
-      filePath: imagePath,
-      name: 'image',
-      formData: {
-        title: title.trim(),
-        subject: subject.trim(),
-        exam_batch: examBatch.trim(),
-      },
-      header: {
-        Authorization: token ? `Bearer ${token}` : '',
-      },
-      success: (res) => {
-        let body = null;
-        try {
-          body = JSON.parse(res.data);
-        } catch (err) {
-          this.setData({ errorMsg: '图片分析响应解析失败' });
-          return;
-        }
-
-        if (res.statusCode !== 200 || body.code !== 0) {
-          this.setData({ errorMsg: body.message || `图片分析失败(${res.statusCode})` });
-          return;
-        }
-
-        this.applyPaperResult(body.data || {});
-        wx.showToast({ title: '分析完成', icon: 'success' });
-      },
-      fail: () => {
-        this.setData({ errorMsg: '图片上传失败，请检查网络' });
-      },
-      complete: () => {
-        this.setData({ loading: false });
-      },
+    this.setData({
+      loading: true,
+      paperResult: null,
+      combinedResult: null,
+      errorMsg: '',
+      uploadProgress: 0,
+      ocrStage: 'uploading',
     });
+    const task = upload.uploadFile({
+      filePath: imagePath,
+      fileName: this.data.imageName,
+      fieldName: 'image',
+      localPath: '/api/ai/exam-paper/ocr-preview',
+      cloudPath: '/api/uploads/cloud/exam-paper/ocr-preview',
+      cloudKind: 'exam-images',
+      onProgress: (progress) => this.setData({ uploadProgress: progress }),
+      timeout: 90000,
+    });
+    task.promise
+      .then((data) => {
+        const text = data.normalized_text || data.raw_text || '';
+        this.setData({
+          ocrPreview: data,
+          ocrText: text,
+          ocrTextLength: text.length,
+          ocrStage: 'preview',
+        });
+        wx.showToast({ title: 'OCR 预览已生成', icon: 'success' });
+      })
+      .catch((err) => {
+        this.setData({ errorMsg: err.message || '图片上传或 OCR 失败', ocrStage: 'failed' });
+      })
+      .finally(() => {
+        this.setData({ loading: false });
+      });
+  },
+
+  onOcrTextInput(e) {
+    const value = e.detail.value || '';
+    this.setData({ ocrText: value, ocrTextLength: value.length, errorMsg: '' });
+  },
+
+  onConfirmOcr() {
+    const { ocrPreview, ocrText, title, subject, examBatch } = this.data;
+    if (!ocrPreview || !ocrPreview.ocr_id) {
+      this.setData({ errorMsg: '请先上传图片并完成 OCR 预览' });
+      return;
+    }
+    if (!ocrText.trim()) {
+      this.setData({ errorMsg: '请检查并补充识别文字后再确认分析' });
+      return;
+    }
+    this.setData({ loading: true, ocrStage: 'analyzing', errorMsg: '' });
+    post('/api/ai/exam-paper/analyze-ocr', {
+      ocr_id: ocrPreview.ocr_id,
+      title: title.trim(),
+      subject: subject.trim(),
+      exam_batch: examBatch.trim(),
+      corrected_text: ocrText.trim(),
+    })
+      .then((data) => {
+        this.applyPaperResult(data);
+        this.setData({ ocrStage: 'done' });
+        wx.showToast({ title: '分析完成', icon: 'success' });
+      })
+      .catch((err) => {
+        this.setData({ errorMsg: err.message || 'OCR 文字分析失败', ocrStage: 'failed' });
+      })
+      .finally(() => {
+        this.setData({ loading: false });
+      });
   },
 
   applyPaperResult(data) {

@@ -16,7 +16,7 @@ def _code_to_http_status(code):
     """业务错误码 -> HTTP 状态码映射"""
     if code == 0:
         return 200
-    if 20001 <= code <= 20007:
+    if 20001 <= code <= 20099:
         return 400
     if 30001 <= code <= 30002:
         return 403
@@ -39,6 +39,9 @@ class ErrorCode:
     CONFIG_MISSING = 20005
     SCORE_IMPORT_INVALID = 20006
     USER_IMPORT_INVALID = 20007
+    UPLOAD_INVALID = 20008
+    UPLOAD_RATE_LIMITED = 20009
+    INVALID_PARAMETER = 20010
     PERMISSION_DENIED = 30001
     ROLE_MAPPING_INVALID = 30002
     TOKEN_EXPIRED = 40001

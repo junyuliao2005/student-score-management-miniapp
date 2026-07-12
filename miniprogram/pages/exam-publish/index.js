@@ -7,6 +7,7 @@ Page({
   data: {
     list: [],
     confirmations: [],
+    confirmationSummary: null,
     selectedPublishId: '',
     loading: false,
     errorText: '',
@@ -161,11 +162,31 @@ Page({
       this.setData({
         selectedPublishId: id,
         confirmations: Array.isArray(data.list) ? data.list : [],
+        confirmationSummary: {
+          confirmed: data.confirmed_count || 0,
+          pending: data.pending_count || 0,
+        },
       });
     }).catch((err) => {
       console.error('[ExamPublish] 加载确认情况失败:', err.message);
-      this.setData({ selectedPublishId: id, confirmations: [] });
+      this.setData({ selectedPublishId: id, confirmations: [], confirmationSummary: null });
     });
+  },
+
+  onExportConfirmations() {
+    const id = this.data.selectedPublishId;
+    if (!id) return;
+    get(`/api/exam-publish/${id}/confirmations/export`)
+      .then((data) => {
+        const filePath = `${wx.env.USER_DATA_PATH}/${data.filename || `parent-confirmations-${id}.xlsx`}`;
+        wx.getFileSystemManager().writeFile({
+          filePath,
+          data: data.content_base64,
+          encoding: 'base64',
+          success: () => wx.openDocument({ filePath, fileType: 'xlsx', showMenu: true }),
+          fail: () => wx.showToast({ title: '导出文件保存失败', icon: 'none' }),
+        });
+      });
   },
 
   normalizeScopeValue(value) {

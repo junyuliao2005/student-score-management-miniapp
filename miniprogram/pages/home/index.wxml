@@ -83,6 +83,18 @@
         <view class="menu-text">课程管理</view>
       </view>
 
+      <!-- 教师数据范围 -->
+      <view wx:if="{{perms.canManageUsers}}" class="menu-item" bindtap="goTo" data-url="/pages/admin/teacher-bindings/index">
+        <view class="menu-icon">🔐</view>
+        <view class="menu-text">教师范围</view>
+      </view>
+
+      <!-- 导入批次 -->
+      <view wx:if="{{perms.canManageUsers}}" class="menu-item" bindtap="goTo" data-url="/pages/admin/import-batches/index">
+        <view class="menu-icon">↩</view>
+        <view class="menu-text">导入批次</view>
+      </view>
+
       <!-- 配置管理 -->
       <view wx:if="{{perms.canManageConfigs}}" class="menu-item" bindtap="goTo" data-url="/pages/admin/configs">
         <view class="menu-icon">⚙️</view>
@@ -111,6 +123,12 @@
       <view wx:if="{{perms.canAiExam}}" class="menu-item" bindtap="goTo" data-url="/pages/exam-analyze/index">
         <view class="menu-icon">📝</view>
         <view class="menu-text">试卷考点分析</view>
+      </view>
+
+      <!-- AI 历史 -->
+      <view wx:if="{{perms.canAiHistory}}" class="menu-item" bindtap="goTo" data-url="/pages/ai-history/index">
+        <view class="menu-icon">◷</view>
+        <view class="menu-text">AI 历史</view>
       </view>
     </view>
   </view>

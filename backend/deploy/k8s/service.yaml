@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-grade-backend
+spec:
+  selector:
+    app: student-grade-backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  type: ClusterIP

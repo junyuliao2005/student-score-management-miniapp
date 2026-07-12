@@ -43,6 +43,23 @@
     </button>
   </view>
 
+  <view wx:if="{{showDevRequestMode}}" class="card dev-mode-card">
+    <view class="dev-mode-title">开发请求模式</view>
+    <view class="dev-mode-switch" role="group" aria-label="开发请求模式">
+      <view
+        class="dev-mode-option {{requestMode === 'local' ? 'dev-mode-option-active' : ''}}"
+        data-mode="local"
+        bindtap="onRequestModeChange"
+      >本地</view>
+      <view
+        class="dev-mode-option {{requestMode === 'cloud' ? 'dev-mode-option-active' : ''}}"
+        data-mode="cloud"
+        bindtap="onRequestModeChange"
+      >云端</view>
+    </view>
+    <view class="dev-mode-hint">本地真机调试请将 BASE_URL 改为电脑局域网地址</view>
+  </view>
+
   <!-- 测试账号提示 -->
   <view class="card test-accounts">
     <view class="card-title">测试账号</view>
@@ -55,9 +72,9 @@
         <text class="account-role tag tag-good">教师</text>
         <text class="account-info">teacher01 / 123456</text>
       </view>
-      <view class="account-item" bindtap="fillAccount" data-username="K12S000091" data-password="123456">
+      <view class="account-item" bindtap="fillAccount" data-username="S001" data-password="123456">
         <text class="account-role tag tag-medium">学生端</text>
-        <text class="account-info">孙敏萍 K12S000091 / 123456</text>
+        <text class="account-info">演示学生 S001 / 123456</text>
       </view>
       <view class="account-item" bindtap="fillAccount" data-username="parent01" data-password="123456">
         <text class="account-role tag tag-pass">家长端</text>

@@ -79,19 +79,42 @@
         loading="{{loading}}"
         disabled="{{loading}}"
       >
-        上传并分析
+        上传并识别
       </button>
+
+      <view wx:if="{{ocrStage === 'uploading'}}" class="ocr-status">
+        上传进度：{{uploadProgress}}% / OCR 识别中
+      </view>
+
+      <view wx:if="{{ocrPreview}}" class="ocr-preview">
+        <view class="form-label">OCR 识别文字（可修改）</view>
+        <textarea
+          class="form-textarea"
+          placeholder="请检查识别结果；OCR 未启用时可在这里手动录入或粘贴试卷文字"
+          value="{{ocrText}}"
+          bindinput="onOcrTextInput"
+          maxlength="10000"
+          auto-height
+        />
+        <view class="text-muted text-small">{{ocrTextLength}}/10000 字</view>
+        <view class="text-muted text-small">OCR：{{ocrPreview.provider}} / {{ocrPreview.mode}} / 置信度：{{ocrPreview.confidence === null ? '不确定' : ocrPreview.confidence}}</view>
+        <view wx:for="{{ocrPreview.warnings}}" wx:key="index" class="ocr-warning">{{item}}</view>
+        <button class="btn-success btn-block mt-16" bindtap="onConfirmOcr" loading="{{ocrStage === 'analyzing'}}" disabled="{{loading}}">
+          确认文字并分析
+        </button>
+      </view>
     </view>
   </view>
 
   <!-- 加载中 -->
   <view wx:if="{{loading}}" class="text-center text-muted" style="padding: 48rpx;">
-    AI 正在分析试卷...
+    {{ocrStage === 'analyzing' ? 'AI 正在分析已确认的试卷文字...' : '正在处理试卷图片...'}}
   </view>
 
   <!-- 试卷分析结果 -->
   <view wx:if="{{paperResult}}">
-    <mock-badge visible="{{paperResult.is_mock}}" text="AI 演示模式" />
+    <mock-badge visible="{{paperResult.mode === 'mock'}}" text="AI 演示模式" />
+    <mock-badge visible="{{paperResult.mode === 'fallback'}}" text="真实模型不可用，已安全降级" />
 
     <!-- 图片识别摘要 -->
     <ai-result-card
@@ -148,6 +171,14 @@
         <text class="meta-label">分析引擎</text>
         <text class="meta-value">{{paperResult.provider}}</text>
       </view>
+      <view class="meta-row">
+        <text class="meta-label">结果模式</text>
+        <text class="meta-value">{{paperResult.mode || (paperResult.is_mock ? 'mock' : 'real')}}</text>
+      </view>
+      <view wx:if="{{paperResult.model}}" class="meta-row">
+        <text class="meta-label">模型</text>
+        <text class="meta-value">{{paperResult.model}}</text>
+      </view>
     </view>
 
     <!-- 联合分析 -->
@@ -170,7 +201,8 @@
 
   <!-- 联合分析结果 -->
   <view wx:if="{{combinedResult}}">
-    <mock-badge visible="{{combinedResult.is_mock}}" text="AI 演示模式" />
+    <mock-badge visible="{{combinedResult.mode === 'mock'}}" text="AI 演示模式" />
+    <mock-badge visible="{{combinedResult.mode === 'fallback'}}" text="真实模型不可用，已安全降级" />
 
     <ai-result-card
       title="可能薄弱知识点"

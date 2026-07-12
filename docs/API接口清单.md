@@ -470,7 +470,23 @@ Excel 批量导入预览。权限: `score:create`
 
 ---
 
-## 11. 健康检查
+## 11. 导入批次账本（admin）
+
+### GET /api/import-batches
+
+管理员分页查询批次。筛选：`page`、`page_size`、`import_type`、`status`、`operator_user_id`。列表不返回快照。
+
+### GET /api/import-batches/<import_batch_id>
+
+管理员查看批次与安全快照。快照仅含成绩/用户撤销必需字段，不含密码、密码哈希、Token、Key、openid。
+
+### POST /api/import-batches/<import_batch_id>/rollback
+
+管理员执行安全撤销。仅 `completed` 批次可撤销；返回 `success_count`、`skipped_count`、`failed_count` 和逐条原因。已撤销批次不能重复撤销。
+
+成绩和学生导入 confirm 响应新增向后兼容字段：`import_batch_id`。
+
+## 12. 健康检查
 
 ### GET /api/health
 服务健康检查。无需认证。
@@ -494,6 +510,7 @@ Excel 批量导入预览。权限: `score:create`
 | 20005 | 400 | 配置缺失 |
 | 20006 | 400 | 成绩导入文件或预览数据无效 |
 | 20007 | 400 | 学生基础信息导入文件或预览数据无效 |
+| 20010 | 400 | 请求参数不完整或不合法 |
 | 30001 | 403 | 权限不足 |
 | 40001 | 401 | Token 已过期 |
 | 40002 | 401 | Token 无效 |
@@ -504,3 +521,25 @@ Excel 批量导入预览。权限: `score:create`
 | 60001 | 500 | AI 分析失败 |
 | 60002 | 500 | AI 输入过长 |
 | 60003 | 500 | AI 请求频率限制 |
+
+## 13. 按需统计与报告
+
+- `GET /api/stats/trends`：教师/管理员班级或学生趋势，需指定 `class_name` 或 `student_id`。
+- `GET /api/stats/my-trend`：当前学生已发布成绩趋势。
+- `GET /api/stats/distribution`：分数段，必须指定 `exam_batch`。
+- `GET /api/stats/progress-rankings`：进步榜，必须指定 `term`、`baseline_batch`、`current_batch`，分页。
+- `GET /api/stats/bias-analysis`：偏科分析，必须指定 `term`、`exam_batch`，分页。
+- `GET /api/reports/scores/export`：教师/管理员范围内成绩 XLSX，必须指定 `exam_batch`，最多 10000 条。
+- `GET /api/reports/students/<student_id>/scores.pdf`：学生/家长只生成已发布可见成绩；教师受绑定范围限制。
+- `GET /api/exam-publish/<id>/confirmations/export`：家长确认表 XLSX。
+
+文件接口返回 `{filename, mime_type, content_base64, row_count}`，便于 local/cloud 两种小程序请求模式统一处理。
+
+## 14. AI 历史反馈
+
+- `GET /api/ai/history`：学生看本人、教师看本人创建、管理员看全部。
+- `POST /api/ai/history/<analysis_id>/feedback`：请求 `{rating: useful|neutral|not_useful, comment?}`；只能评价当前用户可见分析。
+
+## 本地集成验证
+
+Flask URL map 当前共 80 个方法+路径，发布候选关键路由 16/16 注册。2026-07-11 本地 Flask/MySQL HTTP 验证覆盖 health、四角色 profile、学生本人 published 成绩、家长孩子、教师范围、考试发布、导入批次、AI 历史、options 和统计概览；密码登录因不读取凭据而保留人工验证。该说明不新增或改变接口契约。

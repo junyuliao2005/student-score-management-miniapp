@@ -18,9 +18,12 @@
     "pages/admin/courses",
     "pages/admin/configs",
     "pages/admin/logs",
+    "pages/admin/teacher-bindings/index",
+    "pages/admin/import-batches/index",
     "pages/ai-advice/index",
     "pages/ai-class/index",
-    "pages/exam-analyze/index"
+    "pages/exam-analyze/index",
+    "pages/ai-history/index"
   ],
   "window": {
     "backgroundTextStyle": "light",

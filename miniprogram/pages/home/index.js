@@ -47,6 +47,7 @@ Page({
         canAiAdvice: perm.canAiAdvice(),
         canAiClass: perm.canAiClass(),
         canAiExam: perm.canAiExam(),
+        canAiHistory: perm.canAiHistory(),
         isParent: perm.isParent(),
         canManageExamPublish: perm.isTeacher() || perm.isAdmin(),
         canManageParentBindings: perm.isTeacher() || perm.isAdmin(),

@@ -1,5 +1,7 @@
 # AI 真实模型接入说明
 
+DeepSeek V4 Pro 的当前实现、固定 Chat Completions 地址、重试、结构化输出和 fallback 规则见 `docs/DeepSeek-V4-Pro接入说明.md`。当前推荐使用 `AI_PROVIDER=deepseek`；旧的 `openai_compatible` 配置仅为兼容已有部署保留。
+
 当前系统默认使用 `mock` 模式，适合体验版演示、课程设计答辩和稳定测试。本轮不接入真实大模型，也不把 `AI_MOCK_ENABLED` 改为 `false`。
 
 ## 安全原则
@@ -9,7 +11,7 @@
 - 微信云托管中修改 AI 环境变量后需要重新发布后端服务。
 - 如果真实 API 不可用且 `AI_MOCK_ENABLED=true`，系统可以继续用 mock 演示。
 
-## OpenAI-compatible 示例
+## 兼容 Provider 示例
 
 ```env
 AI_PROVIDER=openai_compatible
@@ -29,20 +31,14 @@ AI_MODEL=qwen-plus
 AI_MOCK_ENABLED=false
 ```
 
-## 视觉模型说明
+## 试卷图片链路
 
-试卷图片视觉分析是否能真实启用，取决于所选模型是否支持图像输入。如果模型不支持图片输入，建议继续保持 mock，或后续配置支持多模态的 OpenAI-compatible vision provider。
+当前正式设计不是把图片直接发送给 DeepSeek-V4-Pro，而是：安全上传 -> 图片真实解码 -> OCR 预览 -> 用户修改文字 -> 确认 -> 脱敏 -> DeepSeek/Mock/Fallback 结构化分析。这样即使文本模型不支持视觉输入，也能提供可审查的识别中间结果。
 
-视觉配置预留：
-
-```env
-AI_VISION_PROVIDER=openai_compatible_vision
-AI_VISION_API_BASE_URL=
-AI_VISION_API_KEY=
-AI_VISION_MODEL=
-AI_VISION_TIMEOUT=60
-AI_VISION_MAX_IMAGE_MB=10
-```
+- `OCR_PROVIDER=mock`：自动测试和稳定演示，不冒充真实识别。
+- `OCR_PROVIDER=local`：在 Python 3.11/3.12 可选环境安装 RapidOCR 后启用。
+- DeepSeek 只接收确认后的文字，不接收原始图片。
+- OCR 预览按当前用户隔离、带 TTL，确认或失败后清理。
 
 ## 回退建议
 
@@ -53,4 +49,4 @@ AI_PROVIDER=mock
 AI_MOCK_ENABLED=true
 ```
 
-这样无需外部网络和 API 额度，AI 学情分析仍能稳定演示。
+这样无需外部网络和 API 额度，AI 学情分析仍能稳定演示。所有结果明确返回 `provider`、`model`、`mode=real|mock|fallback`、`trace_id`、`generated_at` 和 `usage`，Mock/Fallback 不冒充真实模型。

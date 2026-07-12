@@ -232,3 +232,82 @@ CREATE TABLE IF NOT EXISTS messages (
     CONSTRAINT fk_messages_course FOREIGN KEY (course_id) REFERENCES courses(course_id),
     CONSTRAINT fk_messages_score FOREIGN KEY (related_score_id) REFERENCES scores(score_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 教师数据范围绑定（管理员维护，教师默认无全校范围）
+CREATE TABLE IF NOT EXISTS teacher_class_bindings (
+    binding_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    teacher_id VARCHAR(20) NOT NULL,
+    class_name VARCHAR(30) NOT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    created_by VARCHAR(20) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_teacher_class_binding (teacher_id, class_name),
+    CONSTRAINT fk_teacher_class_teacher FOREIGN KEY (teacher_id) REFERENCES users(user_id),
+    CONSTRAINT fk_teacher_class_creator FOREIGN KEY (created_by) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS teacher_course_bindings (
+    binding_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    teacher_id VARCHAR(20) NOT NULL,
+    course_id VARCHAR(20) NOT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    created_by VARCHAR(20) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_teacher_course_binding (teacher_id, course_id),
+    CONSTRAINT fk_teacher_course_teacher FOREIGN KEY (teacher_id) REFERENCES users(user_id),
+    CONSTRAINT fk_teacher_course_course FOREIGN KEY (course_id) REFERENCES courses(course_id),
+    CONSTRAINT fk_teacher_course_creator FOREIGN KEY (created_by) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 导入批次审计账本（预览不写入，仅 confirm 成功时生成）
+CREATE TABLE IF NOT EXISTS import_batches (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    import_batch_id VARCHAR(36) NOT NULL,
+    import_type VARCHAR(20) NOT NULL,
+    operator_user_id VARCHAR(20) NOT NULL,
+    source_filename VARCHAR(255) NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'processing',
+    total_rows INT NOT NULL DEFAULT 0,
+    success_rows INT NOT NULL DEFAULT 0,
+    failed_rows INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    rolled_back_at DATETIME NULL,
+    rollback_operator_user_id VARCHAR(20) NULL,
+    rollback_summary TEXT NULL,
+    metadata_json TEXT NULL,
+    UNIQUE KEY uk_import_batches_uuid (import_batch_id),
+    CONSTRAINT fk_import_batches_operator FOREIGN KEY (operator_user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_import_batches_rollback_operator FOREIGN KEY (rollback_operator_user_id) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS import_batch_entries (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    import_batch_id VARCHAR(36) NOT NULL,
+    entity_type VARCHAR(20) NOT NULL,
+    entity_id VARCHAR(50) NOT NULL,
+    action_type VARCHAR(20) NOT NULL,
+    before_snapshot TEXT NULL,
+    after_snapshot TEXT NOT NULL,
+    row_number INT NULL,
+    rollback_status VARCHAR(20) NULL,
+    rollback_reason VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_import_batch_entry (import_batch_id, entity_type, entity_id, action_type),
+    CONSTRAINT fk_import_batch_entries_batch FOREIGN KEY (import_batch_id)
+        REFERENCES import_batches(import_batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ai_analysis_feedback (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    analysis_id BIGINT NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
+    rating VARCHAR(20) NOT NULL,
+    comment VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_ai_feedback_user (analysis_id, user_id),
+    CONSTRAINT fk_ai_feedback_analysis FOREIGN KEY (analysis_id) REFERENCES ai_analysis(analysis_id),
+    CONSTRAINT fk_ai_feedback_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

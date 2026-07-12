@@ -197,3 +197,69 @@
 .ranking-tag {
   flex-shrink: 0;
 }
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 150rpx minmax(0, 1fr) 130rpx;
+  gap: 12rpx;
+  align-items: center;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+}
+
+.chart-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-track {
+  height: 24rpx;
+  background: #edf1f5;
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.chart-bar {
+  height: 100%;
+  min-width: 4rpx;
+  background: #1989fa;
+}
+
+.trend-bar {
+  background: #16a085;
+}
+
+.chart-value {
+  text-align: right;
+  color: #475569;
+}
+
+.progress-delta {
+  min-width: 100rpx;
+  text-align: right;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.delta-positive {
+  color: #16803a;
+}
+
+.delta-negative,
+.bias-gap {
+  color: #c53030;
+}
+
+.bias-item {
+  position: relative;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eef2f6;
+}
+
+.bias-gap {
+  position: absolute;
+  right: 0;
+  top: 20rpx;
+  font-weight: 600;
+}

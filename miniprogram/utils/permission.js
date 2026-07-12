@@ -91,6 +91,10 @@ function canAiExam() {
   return auth.hasPermission('ai:exam_analyze');
 }
 
+function canAiHistory() {
+  return auth.hasPermission('ai:history:read');
+}
+
 module.exports = {
   isStudent,
   isTeacher,
@@ -114,4 +118,5 @@ module.exports = {
   canAiAdvice,
   canAiClass,
   canAiExam,
+  canAiHistory,
 };

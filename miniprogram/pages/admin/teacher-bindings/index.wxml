@@ -1,0 +1,48 @@
+<view class="container">
+  <view class="page-title">教师数据范围</view>
+  <view class="page-desc">教师仅能访问同时命中所选班级和课程的学生成绩。</view>
+
+  <view wx:if="{{loading}}" class="state-text">加载中...</view>
+  <view wx:elif="{{errorMsg}}" class="state-block">
+    <text>{{errorMsg}}</text>
+    <button class="btn-outline btn-small" bindtap="loadData">重试</button>
+  </view>
+  <view wx:elif="{{teachers.length === 0}}" class="state-text">暂无启用教师，请先在用户管理中创建教师</view>
+
+  <block wx:else>
+    <view class="form-group">
+      <text class="form-label">教师</text>
+      <picker mode="selector" range="{{teachers}}" range-key="label" value="{{teacherIndex}}" bindchange="onTeacherChange">
+        <view class="form-picker">
+          <text>{{teachers[teacherIndex].label}}</text>
+          <text>▼</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="scope-section">
+      <view class="scope-title">授权班级</view>
+      <view wx:if="{{classOptions.length === 0}}" class="state-text compact">暂无班级数据</view>
+      <checkbox-group wx:else bindchange="onClassesChange" class="option-grid">
+        <label wx:for="{{classOptions}}" wx:key="value" class="option-item">
+          <checkbox value="{{item.value}}" checked="{{item.checked}}" color="#1989fa" />
+          <text>{{item.label}}</text>
+        </label>
+      </checkbox-group>
+    </view>
+
+    <view class="scope-section">
+      <view class="scope-title">授权课程</view>
+      <view wx:if="{{courseOptions.length === 0}}" class="state-text compact">暂无课程数据</view>
+      <checkbox-group wx:else bindchange="onCoursesChange" class="option-grid">
+        <label wx:for="{{courseOptions}}" wx:key="value" class="option-item">
+          <checkbox value="{{item.value}}" checked="{{item.checked}}" color="#1989fa" />
+          <text>{{item.label}}</text>
+        </label>
+      </checkbox-group>
+    </view>
+
+    <button class="btn-primary save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="onSave">保存教师范围</button>
+    <view wx:if="{{errorMsg}}" class="error-text">{{errorMsg}}</view>
+  </block>
+</view>

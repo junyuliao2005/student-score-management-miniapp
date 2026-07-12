@@ -1,5 +1,6 @@
 const { post } = require('../../utils/request');
 const auth = require('../../utils/auth');
+const env = require('../../env');
 
 Page({
   data: {
@@ -7,12 +8,36 @@ Page({
     password: '',
     loading: false,
     errors: {},
+    showDevRequestMode: false,
+    requestMode: 'cloud',
   },
 
   onLoad() {
+    const requestMode = typeof env.getRequestMode === 'function'
+      ? env.getRequestMode()
+      : env.REQUEST_MODE;
+    this.setData({
+      showDevRequestMode: Boolean(env.isDevelopVersion && env.isDevelopVersion()),
+      requestMode,
+    });
     if (!wx.getStorageSync('privacy_notice_ack')) {
       this.showPrivacyNotice();
     }
+  },
+
+  onRequestModeChange(e) {
+    const mode = e.currentTarget.dataset.mode;
+    if (!env.setDevelopmentRequestMode || !env.setDevelopmentRequestMode(mode)) {
+      wx.showToast({ title: '仅开发版可切换请求模式', icon: 'none' });
+      return;
+    }
+    const app = getApp();
+    const activeMode = app.refreshRequestMode ? app.refreshRequestMode() : mode;
+    this.setData({ requestMode: activeMode });
+    wx.showToast({
+      title: activeMode === 'local' ? '已切换本地后端' : '已切换云托管',
+      icon: 'none',
+    });
   },
 
   onUsernameInput(e) {

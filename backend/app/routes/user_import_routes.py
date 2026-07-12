@@ -5,6 +5,7 @@ from app.middleware.jwt_middleware import jwt_required
 from app.middleware.permission_middleware import role_required
 from app.services import user_import_service
 from app.utils.response import success
+from app.utils.upload_security import check_upload_rate_limit
 
 user_import_bp = Blueprint('user_import', __name__)
 
@@ -14,8 +15,9 @@ user_import_bp = Blueprint('user_import', __name__)
 @role_required('admin')
 def preview_user_import():
     """解析并校验 Excel 学生基础信息文件，不写入数据库。"""
+    check_upload_rate_limit(g.current_user['user_id'], 'user_import_preview', limit=10, window_seconds=60)
     file_storage = request.files.get('file')
-    result = user_import_service.preview_import(file_storage)
+    result = user_import_service.preview_import(file_storage, g.current_user['user_id'])
     return success(result)
 
 
@@ -24,6 +26,7 @@ def preview_user_import():
 @role_required('admin')
 def confirm_user_import():
     """确认导入 preview 中合法且不重复的学生账号。"""
+    check_upload_rate_limit(g.current_user['user_id'], 'user_import_confirm', limit=10, window_seconds=60)
     data = request.get_json(force=True)
     result = user_import_service.confirm_import(
         import_id=data.get('import_id'),
