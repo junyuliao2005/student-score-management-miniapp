@@ -14,6 +14,16 @@ RUN python -m pip install --upgrade pip \
 
 COPY . .
 
+RUN addgroup --system --gid 10001 appgroup \
+    && adduser --system --uid 10001 --ingroup appgroup --home /app appuser \
+    && mkdir -p /app/.runtime \
+    && chown -R appuser:appgroup /app
+
+USER appuser
+
 EXPOSE 5000
 
-CMD ["gunicorn", "-w", "2", "--threads", "4", "-b", "0.0.0.0:5000", "--timeout", "60", "wsgi:app"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '5000') + '/api/health', timeout=3)" || exit 1
+
+CMD ["sh", "-c", "exec gunicorn -w ${GUNICORN_WORKERS:-2} --threads ${GUNICORN_THREADS:-4} -b 0.0.0.0:${PORT:-5000} --timeout ${GUNICORN_TIMEOUT:-60} wsgi:app"]

@@ -12,6 +12,10 @@ Page({
     totalRankings: [],
     subjectRankings: [],
     honorRoll: null,
+    trendSeries: [],
+    distribution: null,
+    progressRankings: [],
+    biasItems: [],
     activeTab: 'overview',
     rankPage: 1,
     rankPageSize: 20,
@@ -24,6 +28,7 @@ Page({
       term: '2025-2026-2',
       class_name: '',
       exam_batch: '',
+      baseline_batch: '',
       course_id: '',
     },
     perms: {},
@@ -132,11 +137,14 @@ Page({
         params[key] = filters[key];
       }
     });
-    if (activeTab !== 'subject') {
+    if (!['subject', 'distribution', 'trend'].includes(activeTab)) {
       delete params.course_id;
     }
+    if (activeTab !== 'progress') {
+      delete params.baseline_batch;
+    }
 
-    const requireBatch = ['total', 'subject', 'honor'].includes(activeTab);
+    const requireBatch = ['total', 'subject', 'honor', 'distribution', 'bias'].includes(activeTab);
     if (requireBatch && !params.exam_batch) {
       this.clearActiveTabData(activeTab);
       if (showBatchTip) {
@@ -153,6 +161,18 @@ Page({
       this.setData({ loading: false });
       return;
     }
+    if (activeTab === 'progress' && (!params.term || !params.baseline_batch || !params.exam_batch)) {
+      this.clearActiveTabData(activeTab);
+      if (showBatchTip) wx.showToast({ title: '请选择学期、基准批次和当前批次', icon: 'none' });
+      this.setData({ loading: false });
+      return;
+    }
+    if (activeTab === 'trend' && !params.class_name) {
+      this.clearActiveTabData(activeTab);
+      if (showBatchTip) wx.showToast({ title: '请先选择班级', icon: 'none' });
+      this.setData({ loading: false });
+      return;
+    }
 
     let task;
     if (activeTab === 'total') {
@@ -164,6 +184,27 @@ Page({
     } else if (activeTab === 'honor') {
       task = get('/api/stats/honor-roll', params)
         .then((data) => this.applyHonorRoll(data));
+    } else if (activeTab === 'trend') {
+      task = get('/api/stats/trends', params).then((data) => this.applyTrend(data));
+    } else if (activeTab === 'distribution') {
+      task = get('/api/stats/distribution', params).then((data) => this.applyDistribution(data));
+    } else if (activeTab === 'progress') {
+      task = get('/api/stats/progress-rankings', {
+        term: params.term,
+        class_name: params.class_name,
+        baseline_batch: params.baseline_batch,
+        current_batch: params.exam_batch,
+        page: rankPage,
+        page_size: rankPageSize,
+      }).then((data) => this.applyProgress(data));
+    } else if (activeTab === 'bias') {
+      task = get('/api/stats/bias-analysis', {
+        term: params.term,
+        class_name: params.class_name,
+        exam_batch: params.exam_batch,
+        page: rankPage,
+        page_size: rankPageSize,
+      }).then((data) => this.applyBias(data));
     } else {
       task = get('/api/stats/overview', params)
         .then((data) => this.applyOverview(data));
@@ -185,6 +226,14 @@ Page({
       this.setData({ subjectRankings: [], subjectTotalPages: 0 });
     } else if (tab === 'honor') {
       this.setData({ honorRoll: null });
+    } else if (tab === 'trend') {
+      this.setData({ trendSeries: [] });
+    } else if (tab === 'distribution') {
+      this.setData({ distribution: null });
+    } else if (tab === 'progress') {
+      this.setData({ progressRankings: [], rankTotalPages: 0 });
+    } else if (tab === 'bias') {
+      this.setData({ biasItems: [], rankTotalPages: 0 });
     }
   },
 
@@ -255,6 +304,56 @@ Page({
     });
   },
 
+  applyTrend(data) {
+    const values = Array.isArray(data.series) ? data.series : [];
+    this.setData({
+      trendSeries: values.map((item) => ({
+        ...item,
+        scoreFmt: formatScore(item.average_score),
+        width: Math.max(4, Math.min(100, Number(item.average_score) || 0)),
+      })),
+    });
+  },
+
+  applyDistribution(data) {
+    const segments = Array.isArray(data.segments) ? data.segments : [];
+    const maxCount = Math.max(1, ...segments.map((item) => Number(item.count) || 0));
+    this.setData({
+      distribution: {
+        total: data.total || 0,
+        segments: segments.map((item) => ({
+          ...item,
+          rateFmt: formatPercent(item.rate),
+          width: Math.round(((Number(item.count) || 0) / maxCount) * 100),
+        })),
+      },
+    });
+  },
+
+  applyProgress(data) {
+    this.setData({
+      progressRankings: (data.list || []).map((item) => ({
+        ...item,
+        baselineFmt: formatScore(item.baseline_score),
+        currentFmt: formatScore(item.current_score),
+        deltaFmt: `${Number(item.delta) >= 0 ? '+' : ''}${formatScore(item.delta)}`,
+      })),
+      rankTotalPages: data.total_pages || 0,
+    });
+  },
+
+  applyBias(data) {
+    this.setData({
+      biasItems: (data.list || []).map((item) => ({
+        ...item,
+        highestText: `${item.highest_subject.course_name || item.highest_subject.course_id} ${formatScore(item.highest_subject.score)}`,
+        lowestText: `${item.lowest_subject.course_name || item.lowest_subject.course_id} ${formatScore(item.lowest_subject.score)}`,
+        gapFmt: formatScore(item.gap),
+      })),
+      rankTotalPages: data.total_pages || 0,
+    });
+  },
+
   onRefresh() {
     if (this.data.refreshing) {
       return;
@@ -293,7 +392,7 @@ Page({
       }
       return;
     }
-    if (this.data.activeTab === 'total' && this.data.rankPage > 1) {
+    if (['total', 'progress', 'bias'].includes(this.data.activeTab) && this.data.rankPage > 1) {
       this.setData({ rankPage: this.data.rankPage - 1 });
       this.loadData();
     }
@@ -310,7 +409,7 @@ Page({
       }
       return;
     }
-    if (this.data.activeTab === 'total' && this.data.rankPage < this.data.rankTotalPages) {
+    if (['total', 'progress', 'bias'].includes(this.data.activeTab) && this.data.rankPage < this.data.rankTotalPages) {
       this.setData({ rankPage: this.data.rankPage + 1 });
       this.loadData();
     }

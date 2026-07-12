@@ -50,6 +50,12 @@ def main():
             headers['Authorization'] = f'Bearer {token}'
         return client.get(url, headers=headers)
 
+    def put_json(client, url, data, token=None):
+        headers = {'Content-Type': 'application/json'}
+        if token:
+            headers['Authorization'] = f'Bearer {token}'
+        return client.put(url, data=json.dumps(data), headers=headers)
+
     # ========== 基础初始化 ==========
     print('=' * 60)
     print('后端运行时验证 (SQLite 内存模式)')
@@ -160,6 +166,18 @@ def main():
 
             # --- 创建成绩 (teacher) ---
             try:
+                resp = put_json(client, '/api/admin/teacher-bindings/T001', {
+                    'class_names': ['2025级1班'],
+                    'course_ids': ['MATH01'],
+                }, token=admin_token)
+                data = resp.get_json()
+                check('PUT /api/admin/teacher-bindings/T001', data.get('code') == 0,
+                      f'code={data.get("code")}')
+            except Exception as e:
+                check('PUT /api/admin/teacher-bindings/T001', False, str(e))
+
+            # --- 创建成绩 (teacher) ---
+            try:
                 resp = post_json(client, '/api/scores', {
                     'student_id': 'S001',
                     'course_id': 'MATH01',
@@ -177,10 +195,41 @@ def main():
             try:
                 resp = get_json(client, '/api/scores/my', token=student_token)
                 data = resp.get_json()
-                check('GET /api/scores/my (student)', data.get('code') == 0,
+                scores = data.get('data', {}).get('scores', [])
+                check('GET /api/scores/my before publish', data.get('code') == 0 and not scores,
+                      f'code={data.get("code")}, scores={len(scores)}')
+            except Exception as e:
+                check('GET /api/scores/my before publish', False, str(e))
+
+            # --- 创建并发布考试成绩可见范围 ---
+            publish_id = None
+            try:
+                resp = post_json(client, '/api/exam-publish', {
+                    'exam_name': '期中成绩发布',
+                    'term': '2025-2026-2',
+                    'exam_batch': '期中',
+                    'class_name': '2025级1班',
+                    'require_parent_signature': False,
+                }, token=teacher_token)
+                data = resp.get_json()
+                publish_id = data.get('data', {}).get('id')
+                check('POST /api/exam-publish (teacher)', bool(publish_id),
+                      f'code={data.get("code")}')
+                resp = post_json(client, f'/api/exam-publish/{publish_id}/publish', {}, token=teacher_token)
+                data = resp.get_json()
+                check('POST /api/exam-publish/<id>/publish', data.get('code') == 0,
                       f'code={data.get("code")}')
             except Exception as e:
-                check('GET /api/scores/my (student)', False, str(e))
+                check('publish score visibility', False, str(e))
+
+            try:
+                resp = get_json(client, '/api/scores/my', token=student_token)
+                data = resp.get_json()
+                scores = data.get('data', {}).get('scores', [])
+                check('GET /api/scores/my after publish', data.get('code') == 0 and len(scores) == 1,
+                      f'code={data.get("code")}, scores={len(scores)}')
+            except Exception as e:
+                check('GET /api/scores/my after publish', False, str(e))
 
             # --- 触发统计刷新 (teacher) ---
             try:

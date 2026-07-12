@@ -25,6 +25,7 @@ def list_publish_settings():
         filters,
         page=request.args.get('page', 1, type=int),
         page_size=request.args.get('page_size', 20, type=int),
+        current_user=g.current_user,
     )
     return success(result)
 
@@ -82,6 +83,13 @@ def list_confirmations(setting_id):
     filters = {k: v for k, v in filters.items() if v}
     result = exam_publish_service.list_confirmations(setting_id, g.current_user, filters)
     return success(result)
+
+
+@exam_publish_bp.route('/api/exam-publish/<int:setting_id>/confirmations/export', methods=['GET'])
+@jwt_required
+@role_required('teacher', 'admin')
+def export_confirmations(setting_id):
+    return success(exam_publish_service.export_confirmations(setting_id, g.current_user))
 
 
 @exam_publish_bp.route('/api/parent-bindings', methods=['GET'])

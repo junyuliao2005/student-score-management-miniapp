@@ -17,7 +17,9 @@ def overview():
     term = request.args.get('term')
     course_id = request.args.get('course_id')
     class_name = request.args.get('class_name')
-    result = stats_service.get_overview(term=term, course_id=course_id, class_name=class_name)
+    result = stats_service.get_overview(
+        term=term, course_id=course_id, class_name=class_name, current_user=g.current_user,
+    )
     return success(result)
 
 
@@ -35,7 +37,7 @@ def rankings():
 
     result = stats_service.get_rankings(
         term=term, course_id=course_id, class_name=class_name, exam_batch=exam_batch,
-        page=page, page_size=page_size
+        page=page, page_size=page_size, current_user=g.current_user,
     )
     return success(result)
 
@@ -57,6 +59,7 @@ def total_rankings():
         class_name=class_name,
         page=page,
         page_size=page_size,
+        current_user=g.current_user,
     )
     return success(result)
 
@@ -69,7 +72,9 @@ def honor_roll():
     term = request.args.get('term')
     exam_batch = request.args.get('exam_batch')
     class_name = request.args.get('class_name')
-    result = stats_service.get_honor_roll(term=term, exam_batch=exam_batch, class_name=class_name)
+    result = stats_service.get_honor_roll(
+        term=term, exam_batch=exam_batch, class_name=class_name, current_user=g.current_user,
+    )
     return success(result)
 
 
@@ -92,6 +97,7 @@ def subject_rankings():
         class_name=class_name,
         page=page,
         page_size=page_size,
+        current_user=g.current_user,
     )
     return success(result)
 
@@ -110,6 +116,7 @@ def evaluate():
         term=term, class_name=class_name, course_id=course_id,
         operator_id=g.current_user['user_id'],
         trace_id=getattr(request, 'trace_id', ''),
+        current_user=g.current_user,
     )
 
     audit_service.write(

@@ -1,0 +1,70 @@
+.page-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8rpx;
+}
+
+.page-desc {
+  color: #64748b;
+  font-size: 26rpx;
+  line-height: 1.6;
+  margin-bottom: 28rpx;
+}
+
+.scope-section {
+  padding: 24rpx 0;
+  border-top: 1rpx solid #e5e7eb;
+}
+
+.scope-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.option-item {
+  min-height: 72rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 12rpx;
+  border: 1rpx solid #dbe2ea;
+  border-radius: 6rpx;
+  background: #fff;
+  box-sizing: border-box;
+  font-size: 26rpx;
+  overflow-wrap: anywhere;
+}
+
+.state-text,
+.state-block {
+  padding: 48rpx 12rpx;
+  text-align: center;
+  color: #64748b;
+}
+
+.state-block button {
+  margin-top: 20rpx;
+}
+
+.state-text.compact {
+  padding: 24rpx 0;
+}
+
+.save-button {
+  margin-top: 24rpx;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 26rpx;
+  margin-top: 16rpx;
+  text-align: center;
+}

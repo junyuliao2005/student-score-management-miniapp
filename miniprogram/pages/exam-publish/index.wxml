@@ -80,6 +80,7 @@
       </view>
       <view class="text-muted text-small">家长签名：{{item.require_parent_signature ? '需要' : '不需要'}} | 发布时间：{{item.publish_time || '-'}}</view>
       <view class="text-muted text-small">匹配学生数：{{item.matched_student_count || 0}} | 匹配成绩数：{{item.matched_score_count || 0}}</view>
+      <view wx:if="{{item.require_parent_signature}}" class="text-muted text-small">家长已确认：{{item.confirmed_parent_count || 0}} | 待确认：{{item.pending_parent_count || 0}}</view>
       <view wx:if="{{item.matched_score_count === 0}}" class="match-warning">当前发布设置未匹配到成绩，请检查学期、考试批次、年级、班级是否正确。</view>
       <view class="action-row">
         <button wx:if="{{item.status !== 'published'}}" class="btn-success btn-small" bindtap="onPublish" data-id="{{item.id}}">发布</button>
@@ -91,7 +92,10 @@
   </view>
 
   <view wx:if="{{confirmations.length > 0}}" class="card">
-    <view class="card-title">确认情况</view>
+    <view class="flex-between">
+      <view class="card-title">确认情况（已确认 {{confirmationSummary.confirmed || 0}} / 待确认 {{confirmationSummary.pending || 0}}）</view>
+      <button class="btn-outline btn-small" bindtap="onExportConfirmations">导出</button>
+    </view>
     <view wx:for="{{confirmations}}" wx:key="id" class="confirm-row">
       <view>
         <view>{{item.student_name || item.student_user_id}} / {{item.parent_name || item.parent_user_id}}</view>

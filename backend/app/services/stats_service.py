@@ -7,7 +7,7 @@ from app.extensions import db
 from app.models.score import Score
 from app.models.user import User
 from app.models.course import Course
-from app.services import config_loader, comment_service, warning_calculator
+from app.services import config_loader, comment_service, warning_calculator, teacher_scope_service
 from app.utils.ranking import competition_rank
 from app.utils.errors import BusinessError, ErrorCode
 from app.utils.validators import validate_pagination
@@ -132,7 +132,7 @@ def refresh_rankings(term, course_id=None, class_name=None, session=None):
     return len(items)
 
 
-def get_overview(term=None, course_id=None, class_name=None):
+def get_overview(term=None, course_id=None, class_name=None, current_user=None):
     """
     统计总览：返回平均分、优秀率、及格率、低分人数等。
     """
@@ -150,6 +150,8 @@ def get_overview(term=None, course_id=None, class_name=None):
     ).select_from(Score).join(
         Course, Score.course_id == Course.course_id
     ).filter(Score.status == 1)
+    if current_user is not None:
+        query = teacher_scope_service.apply_score_scope(query, current_user)
 
     if term:
         query = query.filter(Course.term == term)
@@ -187,7 +189,8 @@ def get_overview(term=None, course_id=None, class_name=None):
     }
 
 
-def get_rankings(term=None, course_id=None, class_name=None, exam_batch=None, page=1, page_size=20):
+def get_rankings(term=None, course_id=None, class_name=None, exam_batch=None, page=1, page_size=20,
+                 current_user=None):
     """
     查询排名列表。
     返回每个学生的 student_id, student_name, total_score, avg_score, rank_no, level_tag, comment_text。
@@ -197,7 +200,10 @@ def get_rankings(term=None, course_id=None, class_name=None, exam_batch=None, pa
     if not exam_batch:
         return _empty_paged_result(page, page_size, '请先选择考试批次后再查看排名')
 
-    all_items = _query_total_rank_items(term=term, exam_batch=exam_batch, class_name=class_name, course_id=course_id)
+    all_items = _query_total_rank_items(
+        term=term, exam_batch=exam_batch, class_name=class_name, course_id=course_id,
+        current_user=current_user,
+    )
     competition_rank(all_items, score_key='total_score')
     for item in all_items:
         item['avg_score'] = item.get('average_score', 0)
@@ -231,19 +237,22 @@ def get_rankings(term=None, course_id=None, class_name=None, exam_batch=None, pa
     }
 
 
-def get_total_rankings(term=None, exam_batch=None, class_name=None, page=1, page_size=20):
+def get_total_rankings(term=None, exam_batch=None, class_name=None, page=1, page_size=20,
+                       current_user=None):
     """实时聚合总分排名，不写回数据库。"""
     page, page_size = validate_pagination({'page': page, 'page_size': page_size})
     if not exam_batch:
         return _empty_paged_result(page, page_size, '请先选择考试批次后再查看总分排名')
 
-    items = _build_total_ranking_items(term=term, exam_batch=exam_batch, class_name=class_name)
+    items = _build_total_ranking_items(
+        term=term, exam_batch=exam_batch, class_name=class_name, current_user=current_user,
+    )
 
     total = len(items)
     start = (page - 1) * page_size
     end = start + page_size
     paged = items[start:end]
-    _attach_subjects(paged, term=term, exam_batch=exam_batch)
+    _attach_subjects(paged, term=term, exam_batch=exam_batch, current_user=current_user)
     return {
         'list': paged,
         'page': page,
@@ -253,7 +262,8 @@ def get_total_rankings(term=None, exam_batch=None, class_name=None, page=1, page
     }
 
 
-def get_subject_rankings(term=None, exam_batch=None, course_id=None, class_name=None, page=1, page_size=20):
+def get_subject_rankings(term=None, exam_batch=None, course_id=None, class_name=None, page=1, page_size=20,
+                         current_user=None):
     """单科排名：按指定考试批次和课程分页返回分数排名。"""
     page, page_size = validate_pagination({'page': page, 'page_size': page_size})
     if not exam_batch:
@@ -279,6 +289,8 @@ def get_subject_rankings(term=None, exam_batch=None, course_id=None, class_name=
         Score.exam_batch == exam_batch,
         Score.course_id == resolved_course_id,
     )
+    if current_user is not None:
+        query = teacher_scope_service.apply_score_scope(query, current_user)
 
     if term:
         query = query.filter(Course.term == term)
@@ -332,7 +344,7 @@ def get_subject_rankings(term=None, exam_batch=None, course_id=None, class_name=
     }
 
 
-def get_honor_roll(term=None, exam_batch=None, class_name=None):
+def get_honor_roll(term=None, exam_batch=None, class_name=None, current_user=None):
     """荣誉榜：总分前 10、单科第一、优秀学生。"""
     if not exam_batch:
         return {
@@ -342,14 +354,16 @@ def get_honor_roll(term=None, exam_batch=None, class_name=None):
             'message': '请先选择考试批次后再查看荣誉榜',
         }
 
-    items = _build_total_ranking_items(term=term, exam_batch=exam_batch, class_name=class_name)
+    items = _build_total_ranking_items(
+        term=term, exam_batch=exam_batch, class_name=class_name, current_user=current_user,
+    )
     top_total = items[:10]
-    _attach_subjects(top_total, term=term, exam_batch=exam_batch)
+    _attach_subjects(top_total, term=term, exam_batch=exam_batch, current_user=current_user)
     excellent_students = [
         item for item in items
         if item.get('average_score', 0) >= 90 or (item.get('overall_rank') or 999999) <= 10
     ][:10]
-    _attach_subjects(excellent_students, term=term, exam_batch=exam_batch)
+    _attach_subjects(excellent_students, term=term, exam_batch=exam_batch, current_user=current_user)
 
     subject_best_map = {}
     query = db.session.query(
@@ -364,6 +378,8 @@ def get_honor_roll(term=None, exam_batch=None, class_name=None):
     ).join(
         Course, Score.course_id == Course.course_id
     ).filter(Score.status == 1)
+    if current_user is not None:
+        query = teacher_scope_service.apply_score_scope(query, current_user)
 
     if term:
         query = query.filter(Course.term == term)
@@ -424,11 +440,13 @@ def get_student_total_summary(student_id, term=None, exam_batch=None):
     }
 
 
-def _build_total_ranking_items(term=None, exam_batch=None, class_name=None):
+def _build_total_ranking_items(term=None, exam_batch=None, class_name=None, current_user=None):
     if not exam_batch:
         return []
 
-    items = _query_total_rank_items(term=term, exam_batch=exam_batch, class_name=class_name)
+    items = _query_total_rank_items(
+        term=term, exam_batch=exam_batch, class_name=class_name, current_user=current_user,
+    )
 
     competition_rank(items, score_key='total_score')
     for item in items:
@@ -466,7 +484,7 @@ def _empty_paged_result(page, page_size, message):
     }
 
 
-def _query_total_rank_items(term=None, exam_batch=None, class_name=None, course_id=None):
+def _query_total_rank_items(term=None, exam_batch=None, class_name=None, course_id=None, current_user=None):
     """按学生聚合总分/均分，只查询必要字段，不加载模型关系。"""
     query = db.session.query(
         Score.student_id,
@@ -485,6 +503,8 @@ def _query_total_rank_items(term=None, exam_batch=None, class_name=None, course_
         Score.status == 1,
         User.status == 1,
     )
+    if current_user is not None:
+        query = teacher_scope_service.apply_score_scope(query, current_user)
 
     if term:
         query = query.filter(Course.term == term)
@@ -518,7 +538,7 @@ def _query_total_rank_items(term=None, exam_batch=None, class_name=None, course_
     ]
 
 
-def _attach_subjects(items, term=None, exam_batch=None):
+def _attach_subjects(items, term=None, exam_batch=None, current_user=None):
     """只为当前页/小列表补充科目明细，避免总分排名拉取全量明细。"""
     if not items:
         return
@@ -536,6 +556,8 @@ def _attach_subjects(items, term=None, exam_batch=None):
         Score.status == 1,
         Score.student_id.in_(student_ids),
     )
+    if current_user is not None:
+        query = teacher_scope_service.apply_score_scope(query, current_user)
 
     if term:
         query = query.filter(Course.term == term)
@@ -600,7 +622,8 @@ def _parse_grade_name(class_name):
     return '未知年级'
 
 
-def evaluate_scores(term=None, class_name=None, course_id=None, operator_id=None, trace_id=None):
+def evaluate_scores(term=None, class_name=None, course_id=None, operator_id=None, trace_id=None,
+                    current_user=None):
     """
     手动触发等级评定、评语刷新和排名刷新。
     1. 找到所有需要刷新的学生
@@ -609,6 +632,8 @@ def evaluate_scores(term=None, class_name=None, course_id=None, operator_id=None
     """
     # 找到所有有成绩的学生
     query = db.session.query(Score.student_id).filter(Score.status == 1)
+    if current_user is not None:
+        query = teacher_scope_service.apply_score_scope(query, current_user)
     if term:
         query = query.join(Course, Score.course_id == Course.course_id).filter(Course.term == term)
     if course_id:

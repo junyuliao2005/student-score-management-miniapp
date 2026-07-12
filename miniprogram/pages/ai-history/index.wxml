@@ -1,0 +1,30 @@
+<view class="container">
+  <view class="page-title">AI 分析历史</view>
+  <view wx:if="{{loading}}" class="state-text">加载中...</view>
+  <view wx:elif="{{errorMsg}}" class="state-block">
+    <text>{{errorMsg}}</text>
+    <button class="btn-outline btn-small" bindtap="loadData">重试</button>
+  </view>
+  <view wx:elif="{{list.length === 0}}" class="state-text">暂无 AI 分析记录</view>
+
+  <view wx:else>
+    <view wx:for="{{list}}" wx:key="analysis_id" class="history-item">
+      <view class="history-header">
+        <text class="history-title">{{item.typeText}}</text>
+        <text class="mode-tag mode-{{item.provider}}">{{item.provider || 'unknown'}}</text>
+      </view>
+      <view class="history-meta">对象：{{item.target_id}} | {{item.created_at}}</view>
+      <view class="history-meta">模型：{{item.model_name || '未记录'}} | 状态：{{item.status}}</view>
+      <view class="history-summary">{{item.summaryText}}</view>
+      <view class="feedback-row">
+        <button class="btn-small {{item.feedbackRating === 'useful' ? 'feedback-active' : 'btn-outline'}}" data-id="{{item.analysis_id}}" data-rating="useful" bindtap="onFeedback">有帮助</button>
+        <button class="btn-small {{item.feedbackRating === 'not_useful' ? 'feedback-negative' : 'btn-outline'}}" data-id="{{item.analysis_id}}" data-rating="not_useful" bindtap="onFeedback">需改进</button>
+      </view>
+    </view>
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{page <= 1}}" bindtap="onPrevPage">上一页</button>
+      <text>{{page}} / {{totalPages || 1}}</text>
+      <button class="btn-outline btn-small" disabled="{{page >= totalPages}}" bindtap="onNextPage">下一页</button>
+    </view>
+  </view>
+</view>

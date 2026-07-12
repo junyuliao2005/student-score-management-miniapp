@@ -4,6 +4,7 @@ const { LEVEL_TAG_CLASS } = require('../../utils/constants');
 const perm = require('../../utils/permission');
 const auth = require('../../utils/auth');
 const options = require('../../utils/options');
+const exportFile = require('../../utils/export_file');
 
 Page({
   data: {
@@ -18,6 +19,9 @@ Page({
     },
     loading: false,
     emptyText: '暂无成绩数据',
+    trendLoading: false,
+    trendSeries: [],
+    showTrend: false,
     filterExpanded: false,
     filters: {
       term: '',
@@ -91,6 +95,46 @@ Page({
 
   onToggleFilter() {
     this.setData({ filterExpanded: !this.data.filterExpanded });
+  },
+
+  onExportPdf() {
+    const studentId = this.data.studentInfo && this.data.studentInfo.student_id;
+    if (!studentId) {
+      wx.showToast({ title: '暂无可导出成绩', icon: 'none' });
+      return;
+    }
+    wx.showLoading({ title: '正在生成' });
+    get(`/api/reports/students/${encodeURIComponent(studentId)}/scores.pdf`, {
+      term: this.data.filters.term || undefined,
+      exam_batch: this.data.filters.exam_batch || undefined,
+    })
+      .then((data) => exportFile.openBase64File(data))
+      .catch((err) => wx.showToast({ title: err.message || '报告生成失败', icon: 'none' }))
+      .finally(() => wx.hideLoading());
+  },
+
+  onLoadTrend() {
+    if (this.data.trendLoading) return;
+    if (this.data.showTrend) {
+      this.setData({ showTrend: false });
+      return;
+    }
+    this.setData({ trendLoading: true });
+    get('/api/stats/my-trend', {
+      term: this.data.filters.term || undefined,
+      course_id: this.data.filters.course_id || undefined,
+    })
+      .then((data) => {
+        this.setData({
+          trendSeries: (data.series || []).map((item) => ({
+            ...item,
+            scoreFmt: formatScore(item.average_score),
+            width: Math.max(4, Math.min(100, Number(item.average_score) || 0)),
+          })),
+          showTrend: true,
+        });
+      })
+      .finally(() => this.setData({ trendLoading: false }));
   },
 
   onFilterInput(e) {

@@ -1,5 +1,7 @@
 """成绩发布、家长绑定与签名确认服务。"""
 from datetime import datetime
+import base64
+import io
 
 from flask import current_app
 
@@ -13,7 +15,7 @@ from app.models.exam_publish import (
 from app.models.role import Role
 from app.models.score import Score
 from app.models.user import User
-from app.services import audit_service
+from app.services import audit_service, teacher_scope_service
 from app.utils.errors import BusinessError, ErrorCode
 from app.utils.validators import validate_pagination
 
@@ -25,9 +27,11 @@ EDITABLE_FIELDS = [
 ]
 
 
-def list_publish_settings(filters, page=1, page_size=20):
+def list_publish_settings(filters, page=1, page_size=20, current_user=None):
     page, page_size = validate_pagination({'page': page, 'page_size': page_size})
     query = ExamPublishSetting.query
+    if current_user and _is_teacher_only(current_user):
+        query = query.filter(ExamPublishSetting.created_by == current_user.get('user_id'))
     for field in ('term', 'exam_batch', 'grade_name', 'class_name', 'status'):
         if filters.get(field):
             query = query.filter(getattr(ExamPublishSetting, field) == filters[field])
@@ -53,6 +57,7 @@ def create_publish_setting(payload, current_user, trace_id=''):
     _require_fields(payload, ['exam_name', 'term', 'exam_batch'])
     setting = ExamPublishSetting(created_by=current_user.get('user_id'), status='draft')
     _assign_setting_fields(setting, payload)
+    _ensure_setting_scope(setting, current_user)
     db.session.add(setting)
     db.session.flush()
     audit_service.write(
@@ -70,9 +75,11 @@ def create_publish_setting(payload, current_user, trace_id=''):
 def update_publish_setting(setting_id, payload, current_user, trace_id=''):
     _require_staff(current_user)
     setting = _get_setting(setting_id)
+    _ensure_setting_scope(setting, current_user)
     if setting.status == 'published':
         raise BusinessError(ErrorCode.PERMISSION_DENIED, '已发布设置请先撤回后再编辑')
     _assign_setting_fields(setting, payload)
+    _ensure_setting_scope(setting, current_user)
     audit_service.write(
         action='exam_publish.update',
         operator_id=current_user.get('user_id'),
@@ -88,6 +95,7 @@ def update_publish_setting(setting_id, payload, current_user, trace_id=''):
 def delete_publish_setting(setting_id, current_user, trace_id=''):
     _require_staff(current_user)
     setting = _get_setting(setting_id)
+    _ensure_setting_scope(setting, current_user)
     if setting.status == 'published':
         raise BusinessError(ErrorCode.PERMISSION_DENIED, '请先撤回后再删除')
     if _is_teacher_only(current_user) and setting.created_by and setting.created_by != current_user.get('user_id'):
@@ -110,6 +118,7 @@ def delete_publish_setting(setting_id, current_user, trace_id=''):
 def publish_setting(setting_id, current_user, trace_id=''):
     _require_staff(current_user)
     setting = _get_setting(setting_id)
+    _ensure_setting_scope(setting, current_user)
     setting.status = 'published'
     setting.publish_time = datetime.now()
     setting.withdraw_time = None
@@ -133,6 +142,7 @@ def publish_setting(setting_id, current_user, trace_id=''):
 def withdraw_setting(setting_id, current_user, trace_id=''):
     _require_staff(current_user)
     setting = _get_setting(setting_id)
+    _ensure_setting_scope(setting, current_user)
     setting.status = 'withdrawn'
     setting.withdraw_time = datetime.now()
     audit_service.write(
@@ -150,6 +160,7 @@ def withdraw_setting(setting_id, current_user, trace_id=''):
 def list_confirmations(setting_id, current_user, filters=None):
     _require_staff(current_user)
     setting = _get_setting(setting_id)
+    _ensure_setting_scope(setting, current_user)
     if setting.require_parent_signature:
         _ensure_confirmations_for_setting(setting)
         db.session.commit()
@@ -171,9 +182,14 @@ def list_confirmations(setting_id, current_user, filters=None):
     students = _student_map(student_ids)
 
     result = []
+    teacher_classes = None
+    if _is_teacher_only(current_user):
+        teacher_classes = set(teacher_scope_service.get_scope(current_user)['class_names'])
     for row in rows:
         confirm = row.ParentScoreConfirmation
         student = students.get(confirm.student_user_id, {})
+        if teacher_classes is not None and student.get('class_name') not in teacher_classes:
+            continue
         if filters.get('class_name') and student.get('class_name') != filters['class_name']:
             continue
         data = confirm.to_dict()
@@ -194,8 +210,42 @@ def list_confirmations(setting_id, current_user, filters=None):
     }
 
 
+def export_confirmations(setting_id, current_user):
+    setting = _get_setting(setting_id)
+    _ensure_setting_scope(setting, current_user)
+    data = list_confirmations(setting_id, current_user)
+    try:
+        from openpyxl import Workbook
+    except ImportError as exc:
+        raise BusinessError(ErrorCode.INTERNAL_SERVER_ERROR, '缺少 openpyxl，无法导出确认表') from exc
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = '家长确认情况'
+    sheet.append(['考试名称', '学期', '考试批次', '学号', '学生姓名', '班级', '家长ID', '家长姓名', '确认状态', '确认时间', '备注'])
+    for item in data['list']:
+        sheet.append([
+            setting.exam_name, setting.term, setting.exam_batch,
+            item.get('student_user_id'), item.get('student_name'), item.get('class_name'),
+            item.get('parent_user_id'), item.get('parent_name'), item.get('confirm_status'),
+            item.get('confirmed_at'), item.get('remark'),
+        ])
+    output = io.BytesIO()
+    workbook.save(output)
+    safe_name = f'parent-confirmations-{setting.id}.xlsx'
+    return {
+        'filename': safe_name,
+        'mime_type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'content_base64': base64.b64encode(output.getvalue()).decode('ascii'),
+        'confirmed_count': data['confirmed_count'],
+        'pending_count': data['pending_count'],
+    }
+
+
 def list_bindings(filters, current_user):
     _require_staff(current_user)
+    teacher_classes = None
+    if _is_teacher_only(current_user):
+        teacher_classes = set(teacher_scope_service.get_scope(current_user)['class_names'])
     query = db.session.query(
         ParentStudentBinding,
         User.real_name.label('parent_name'),
@@ -217,6 +267,8 @@ def list_bindings(filters, current_user):
         binding = row.ParentStudentBinding
         data = binding.to_dict()
         student = students.get(binding.student_user_id, {})
+        if teacher_classes is not None and student.get('class_name') not in teacher_classes:
+            continue
         data.update({
             'parent_name': row.parent_name,
             'parent_username': row.parent_username,
@@ -444,6 +496,16 @@ def _require_fields(payload, fields):
     missing = [field for field in fields if not str(payload.get(field) or '').strip()]
     if missing:
         raise BusinessError(ErrorCode.INTERNAL_SERVER_ERROR, f"缺少必填字段: {', '.join(missing)}")
+
+
+def _ensure_setting_scope(setting, current_user):
+    if not _is_teacher_only(current_user):
+        return
+    if setting.created_by and setting.created_by != current_user.get('user_id'):
+        raise BusinessError(ErrorCode.PERMISSION_DENIED, '只能管理自己创建的考试发布')
+    if not _normalize_scope_value(setting.class_name):
+        raise BusinessError(ErrorCode.PERMISSION_DENIED, '教师发布考试时必须选择已绑定班级')
+    teacher_scope_service.ensure_access(current_user, class_name=setting.class_name)
 
 
 def _require_staff(current_user):
@@ -730,9 +792,15 @@ def _match_counts_for_setting(setting):
     )
     query = _apply_setting_student_scope(query, setting)
     row = query.first()
+    confirm_row = db.session.query(
+        db.func.sum(db.case((ParentScoreConfirmation.confirm_status == 'confirmed', 1), else_=0)).label('confirmed'),
+        db.func.sum(db.case((ParentScoreConfirmation.confirm_status != 'confirmed', 1), else_=0)).label('pending'),
+    ).filter(ParentScoreConfirmation.publish_id == setting.id).first()
     return {
         'matched_student_count': int(row.student_count or 0) if row else 0,
         'matched_score_count': int(row.score_count or 0) if row else 0,
+        'confirmed_parent_count': int(confirm_row.confirmed or 0) if confirm_row else 0,
+        'pending_parent_count': int(confirm_row.pending or 0) if confirm_row else 0,
     }
 
 

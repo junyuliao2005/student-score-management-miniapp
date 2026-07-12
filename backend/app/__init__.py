@@ -1,6 +1,6 @@
 import logging
 from flask import Flask
-from config import Config
+from config import Config, validate_runtime_config
 from app.extensions import db, cors
 
 # 配置日志
@@ -18,6 +18,8 @@ def create_app(config_class=None):
     else:
         app.config.from_object(config_class)
 
+    validate_runtime_config(app.config)
+
     # 初始化扩展
     db.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
@@ -25,6 +27,9 @@ def create_app(config_class=None):
     # 注册模型（确保表被 SQLAlchemy 识别）
     from app.models import user, role, course, score, sys_config, audit_log
     from app.models import ai_analysis, exam_paper, message, exam_publish
+    from app.models import teacher_binding
+    from app.models import import_batch
+    from app.models import ai_feedback
 
     # 注册中间件
     from app.middleware.trace_middleware import init_trace_middleware

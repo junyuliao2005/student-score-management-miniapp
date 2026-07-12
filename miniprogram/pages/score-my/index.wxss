@@ -165,3 +165,33 @@
 .my-comment {
   padding: 12rpx 0;
 }
+.my-trend-row {
+  display: grid;
+  grid-template-columns: 180rpx minmax(0, 1fr) 90rpx;
+  gap: 12rpx;
+  align-items: center;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+}
+
+.my-trend-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-trend-track {
+  height: 22rpx;
+  background: #edf1f5;
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.my-trend-bar {
+  height: 100%;
+  background: #16a085;
+}
+
+.my-trend-value {
+  text-align: right;
+}

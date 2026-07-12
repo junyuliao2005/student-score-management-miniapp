@@ -1,43 +1,75 @@
-# secrets and local config
+# Secrets and local environment
 .env
-*.env.local
+.env.*
+!.env.example
+!.env.cloud.example
+!.env.docker.example
 backend/.env
-backend/.env.*.local
-project.private.config.json
-miniprogram/project.private.config.json
 
-# python
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
-*.pyd
-.venv/
-venv/
-.envrc
 .pytest_cache/
+.pytest-tmp/
+.cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv/
+.venv-ocr*/
+venv/
 
-# node / wechat build
+# Node / miniprogram tooling
 node_modules/
-dist/
-build/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+miniprogram_npm/
 
-# runtime files
+# Runtime data and user uploads
+uploads/
+upload/
+temp/
+tmp/
+.tmp/
+logs/
 *.log
+backend/.tmp/
+backend/.runtime/
+backend/uploads/
+backend/logs/
+
+# Import previews and generated test output
+backend/import_previews/
+backend/test-output/
+test-output/
+artifacts/
+deliverables/
+local_backups/
+cloud-backups/
+*.zip
+*.xlsx
+*.xls
+Score test/
+
+# Databases and backups
 *.db
 *.sqlite
 *.sqlite3
-uploads/
-temp/
-tmp/
+*.sql.gz
+*.dump
+*.bak
+*.backup
 
-# private datasets: keep demo data only if explicitly sanitized
-*.xlsx
-*.xls
-!docs/demo_data.xlsx
-
-# OS / editor
+# IDE / OS
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db
-.vscode/
-.idea/
+desktop.ini
+
+# Local WeChat developer settings
+project.private.config.json

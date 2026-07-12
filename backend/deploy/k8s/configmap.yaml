@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: student-grade-backend-config
+data:
+  FLASK_ENV: "production"
+  PORT: "5000"
+  DB_HOST: "replace-with-mysql-host"
+  DB_PORT: "3306"
+  DB_NAME: "student_grade_db"
+  DB_USER: "grade_app"
+  AI_PROVIDER: "mock"
+  AI_MOCK_ENABLED: "true"
+  AI_FALLBACK_ENABLED: "true"
+  OCR_PROVIDER: "mock"
+  GUNICORN_WORKERS: "2"
+  GUNICORN_THREADS: "4"
+  GUNICORN_TIMEOUT: "60"

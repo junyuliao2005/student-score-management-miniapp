@@ -1,0 +1,61 @@
+<view class="container">
+  <view class="page-title">导入批次记录</view>
+
+  <view class="filter-row">
+    <picker class="filter-picker" mode="selector" range="{{importTypeOptions}}" range-key="label" value="{{importTypeIndex}}" bindchange="onTypeChange">
+      <view class="filter-control">{{importTypeOptions[importTypeIndex].label}} ▼</view>
+    </picker>
+    <picker class="filter-picker" mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+      <view class="filter-control">{{statusOptions[statusIndex].label}} ▼</view>
+    </picker>
+  </view>
+
+  <view wx:if="{{loading}}" class="state-text">加载中...</view>
+  <view wx:elif="{{errorMsg}}" class="state-block">
+    <text>{{errorMsg}}</text>
+    <button class="btn-outline btn-small" bindtap="loadData">重试</button>
+  </view>
+  <view wx:elif="{{batches.length === 0}}" class="state-text">暂无导入批次记录</view>
+
+  <view wx:else>
+    <view class="batch-item" wx:for="{{batches}}" wx:key="import_batch_id">
+      <view class="batch-header">
+        <text class="batch-type">{{item.typeText}}</text>
+        <text class="status-tag status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="batch-meta">操作者：{{item.operator_user_id || '-'}}</view>
+      <view class="batch-meta">文件：{{item.source_filename || '-'}}</view>
+      <view class="batch-meta">时间：{{item.completed_at || item.created_at || '-'}}</view>
+      <view class="count-row">
+        <text>总计 {{item.total_rows}}</text>
+        <text class="success-text">成功 {{item.success_rows}}</text>
+        <text class="error-text">未导入 {{item.failed_rows}}</text>
+      </view>
+      <button class="btn-outline btn-small" data-id="{{item.import_batch_id}}" bindtap="onViewDetail">查看详情</button>
+    </view>
+
+    <view class="pagination">
+      <button class="btn-outline btn-small" disabled="{{page <= 1}}" bindtap="onPrevPage">上一页</button>
+      <text>{{page}} / {{totalPages || 1}}</text>
+      <button class="btn-outline btn-small" disabled="{{page >= totalPages}}" bindtap="onNextPage">下一页</button>
+    </view>
+  </view>
+
+  <view wx:if="{{showDetail}}" class="modal-mask" bindtap="onCloseDetail">
+    <view class="modal-content detail-modal" catchtap="">
+      <view class="detail-title">{{detail.typeText}}详情</view>
+      <view class="batch-meta">批次：{{detail.import_batch_id}}</view>
+      <view class="batch-meta">状态：{{detail.statusText}}</view>
+      <scroll-view class="entry-list" scroll-y="true">
+        <view wx:if="{{detail.entries.length === 0}}" class="state-text">该批次没有写入条目</view>
+        <view wx:for="{{detail.entries}}" wx:key="id" class="entry-item">
+          <view>{{item.entity_type}} / {{item.entity_id}} / {{item.action_type}}</view>
+          <view wx:if="{{item.row_number}}" class="entry-note">Excel 第 {{item.row_number}} 行</view>
+          <view wx:if="{{item.rollback_status}}" class="entry-note">{{item.rollback_status}}：{{item.rollback_reason}}</view>
+        </view>
+      </scroll-view>
+      <button wx:if="{{detail.status === 'completed'}}" class="btn-danger" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onRollback">安全撤销本批次</button>
+      <button class="btn-outline" disabled="{{actionLoading}}" bindtap="onCloseDetail">关闭</button>
+    </view>
+  </view>
+</view>

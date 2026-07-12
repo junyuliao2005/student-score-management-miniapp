@@ -2,7 +2,7 @@
 from flask import Blueprint, request, g
 from app.middleware.jwt_middleware import jwt_required
 from app.middleware.permission_middleware import permission_required
-from app.services import user_service, course_service, audit_service
+from app.services import user_service, course_service, audit_service, teacher_scope_service
 from app.services.config_loader import clear_cache
 from app.models.sys_config import SysConfig
 from app.models.role import Role
@@ -108,6 +108,9 @@ def update_user(user_id):
 def list_classes():
     """查询可用于班级分析的班级列表"""
     result = user_service.list_class_names()
+    if teacher_scope_service.is_teacher(g.current_user) and not teacher_scope_service.is_admin(g.current_user):
+        allowed = set(teacher_scope_service.get_scope(g.current_user)['class_names'])
+        result['classes'] = [name for name in result.get('classes', []) if name in allowed]
     return success(result)
 
 

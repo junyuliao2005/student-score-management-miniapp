@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-student_grade_db}
+      MYSQL_USER: ${DB_USER:-grade_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.docker}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env.docker}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_general_ci"]
+    volumes:
+      - grade_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    ports:
+      - "127.0.0.1:3307:3306"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: ${FLASK_ENV:-development}
+      PORT: 5000
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env.docker}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env.docker}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-student_grade_db}
+      DB_USER: ${DB_USER:-grade_app}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.docker}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_MOCK_ENABLED: ${AI_MOCK_ENABLED:-true}
+      AI_FALLBACK_ENABLED: ${AI_FALLBACK_ENABLED:-true}
+      OCR_PROVIDER: ${OCR_PROVIDER:-mock}
+    volumes:
+      - backend_runtime:/app/.runtime
+    ports:
+      - "127.0.0.1:5000:5000"
+
+volumes:
+  grade_mysql_data:
+  backend_runtime:

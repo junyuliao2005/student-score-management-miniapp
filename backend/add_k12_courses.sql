@@ -1,4 +1,4 @@
-﻿USE student_grade_db;
+USE student_grade_db;
 
 INSERT INTO courses (course_id, course_name, teacher_id, term, credit, status, created_at, updated_at)
 VALUES

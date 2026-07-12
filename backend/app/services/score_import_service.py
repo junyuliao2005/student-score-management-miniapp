@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import time
 import uuid
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -10,8 +11,10 @@ from app.extensions import db
 from app.models.course import Course
 from app.models.score import Score
 from app.models.user import User
-from app.services import audit_service, score_service
+from app.services import audit_service, score_service, teacher_scope_service, import_batch_service
 from app.utils.errors import BusinessError, ErrorCode
+from app.utils.upload_security import validate_xlsx_upload
+from app.utils import runtime_storage
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ HEADER_ALIASES = {
 REQUIRED_FIELDS = ['student_id', 'course_id', 'score', 'exam_date', 'exam_batch']
 
 
-def preview_import(file_storage):
+def preview_import(file_storage, current_user):
     """解析并校验 .xlsx 文件，不写入成绩表。"""
     _validate_file(file_storage)
 
@@ -70,7 +73,7 @@ def preview_import(file_storage):
 
         total_rows += 1
         row = _parse_row(row_index, row_values, header_map)
-        _validate_row(row, seen_keys)
+        _validate_row(row, seen_keys, current_user)
 
         if row['status'] == 'valid':
             valid_rows += 1
@@ -84,90 +87,102 @@ def preview_import(file_storage):
     import_id = uuid.uuid4().hex
     result = {
         'import_id': import_id,
+        'source_filename': os.path.basename(str(file_storage.filename or 'scores.xlsx')),
         'total_rows': total_rows,
         'valid_rows': valid_rows,
         'error_rows': error_rows,
         'duplicate_rows': duplicate_rows,
         'rows': rows,
     }
-    _save_preview(import_id, result)
+    cached_result = dict(result)
+    cached_result['operator_id'] = current_user.get('user_id')
+    cached_result['created_at'] = int(time.time())
+    _save_preview(import_id, cached_result)
     return result
 
 
-def confirm_import(import_id, operator_id, trace_id):
+def confirm_import(import_id, operator_id, trace_id, current_user):
     """导入 preview 中合法且不重复的成绩。"""
-    preview = _load_preview(import_id)
+    preview = _load_preview(import_id, operator_id)
     rows = preview.get('rows') or []
 
     inserted_count = 0
     skipped_count = 0
-    runtime_error_count = 0
-
-    for row in rows:
-        if row.get('status') != 'valid':
-            if row.get('status') == 'duplicate':
+    original_error_count = int(preview.get('error_rows', 0) or 0)
+    batch = None
+    try:
+        batch = import_batch_service.create_batch(
+            import_type='scores',
+            operator_user_id=operator_id,
+            source_filename=preview.get('source_filename'),
+            total_rows=preview.get('total_rows', len(rows)),
+            metadata={
+                'preview_import_id': import_id,
+                'duplicate_rows': preview.get('duplicate_rows', 0),
+            },
+        )
+        for row in rows:
+            if row.get('status') != 'valid':
+                if row.get('status') == 'duplicate':
+                    skipped_count += 1
+                continue
+            if _has_active_duplicate(row['student_id'], row['course_id'], row['exam_batch']):
                 skipped_count += 1
-            continue
+                continue
 
-        if _has_active_duplicate(row['student_id'], row['course_id'], row['exam_batch']):
-            skipped_count += 1
-            row['status'] = 'duplicate'
-            row['errors'] = ['数据库中已存在同一学生、课程、批次的有效成绩']
-            continue
-
-        payload = {
-            'student_id': row['student_id'],
-            'course_id': row['course_id'],
-            'score': row['score'],
-            'exam_date': row['exam_date'],
-            'exam_batch': row['exam_batch'],
-        }
-
-        try:
-            score_service.create_score(payload, operator_id=operator_id, trace_id=trace_id)
+            result = score_service.create_score(
+                {
+                    'student_id': row['student_id'],
+                    'course_id': row['course_id'],
+                    'score': row['score'],
+                    'exam_date': row['exam_date'],
+                    'exam_batch': row['exam_batch'],
+                },
+                operator_id=operator_id,
+                trace_id=trace_id,
+                current_user=current_user,
+                commit=False,
+            )
+            record = Score.query.filter_by(score_id=result['score_id']).first()
+            import_batch_service.record_score_entry(batch, record, row_number=row.get('row_no'))
             inserted_count += 1
-        except BusinessError as exc:
-            row['status'] = 'error'
-            row['errors'] = [exc.message]
-            if exc.code == ErrorCode.SCORE_DUPLICATE:
-                skipped_count += 1
-                row['status'] = 'duplicate'
-            else:
-                runtime_error_count += 1
-            logger.warning('批量导入单行失败: row=%s, error=%s', row.get('row_no'), exc.message)
 
-    original_error_count = preview.get('error_rows', 0)
-
-    audit_service.write(
-        action='score.import.confirm',
-        operator_id=operator_id,
-        target_type='score_import',
-        target_id=import_id,
-        detail={
-            'inserted_count': inserted_count,
-            'skipped_count': skipped_count,
-            'error_count': original_error_count + runtime_error_count,
-        },
-        trace_id=trace_id,
-    )
-    db.session.commit()
+        failed_count = max(int(preview.get('total_rows', len(rows))) - inserted_count, 0)
+        import_batch_service.complete_batch(batch, inserted_count, failed_count)
+        audit_service.write(
+            action='score.import.confirm',
+            operator_id=operator_id,
+            target_type='import_batch',
+            target_id=batch.import_batch_id,
+            detail={
+                'preview_import_id': import_id,
+                'inserted_count': inserted_count,
+                'skipped_count': skipped_count,
+                'error_count': original_error_count,
+            },
+            trace_id=trace_id,
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    _delete_preview(import_id)
 
     return {
         'import_id': import_id,
+        'import_batch_id': batch.import_batch_id,
         'inserted_count': inserted_count,
         'skipped_count': skipped_count,
-        'error_count': original_error_count + runtime_error_count,
+        'error_count': original_error_count,
         'task_status': 'done',
     }
 
 
 def _validate_file(file_storage):
-    if not file_storage:
-        raise BusinessError(ErrorCode.SCORE_IMPORT_INVALID, '请上传 Excel 文件')
-
-    filename = file_storage.filename or ''
-    if not filename.lower().endswith('.xlsx'):
-        raise BusinessError(ErrorCode.SCORE_IMPORT_INVALID, '仅支持 .xlsx 文件')
+    try:
+        validate_xlsx_upload(file_storage, max_size_mb=10)
+    except BusinessError as exc:
+        raise BusinessError(ErrorCode.SCORE_IMPORT_INVALID, exc.message, http_status=exc.http_status) from exc
 
 
 def _build_header_map(header_row):
@@ -208,7 +223,7 @@ def _parse_row(row_no, row_values, header_map):
     return row
 
 
-def _validate_row(row, seen_keys):
+def _validate_row(row, seen_keys, current_user):
     errors = []
 
     student_id = row.get('student_id') or ''
@@ -254,6 +269,14 @@ def _validate_row(row, seen_keys):
                 errors.append('课程名称与课程编号不匹配')
             if row.get('term') and row['term'] != course.term:
                 errors.append('学期与课程所属学期不匹配')
+
+    if student and course and not errors:
+        try:
+            teacher_scope_service.ensure_access(
+                current_user, student_id=student_id, course_id=course_id,
+            )
+        except BusinessError as exc:
+            errors.append(exc.message)
 
     key = (student_id, course_id, exam_batch)
     if all(key):
@@ -329,29 +352,33 @@ def _is_empty_row(row_values):
 
 
 def _preview_dir():
-    backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    path = os.path.join(backend_root, '.tmp', 'score_imports')
-    os.makedirs(path, exist_ok=True)
-    return path
+    return runtime_storage.resolve_private_dir('SCORE_IMPORT_PREVIEW_DIR', 'score_imports')
 
 
 def _preview_path(import_id):
-    safe_id = ''.join(ch for ch in import_id if ch.isalnum())
-    return os.path.join(_preview_dir(), f'{safe_id}.json')
+    return runtime_storage.preview_path(
+        'score_imports', import_id, 'SCORE_IMPORT_PREVIEW_DIR', ErrorCode.SCORE_IMPORT_INVALID,
+    )
 
 
 def _save_preview(import_id, data):
-    with open(_preview_path(import_id), 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    runtime_storage.save_preview(
+        'score_imports', import_id, data, 'SCORE_IMPORT_PREVIEW_DIR', ErrorCode.SCORE_IMPORT_INVALID,
+    )
 
 
-def _load_preview(import_id):
+def _load_preview(import_id, operator_id):
     if not import_id:
         raise BusinessError(ErrorCode.SCORE_IMPORT_INVALID, 'import_id 不能为空')
 
-    path = _preview_path(import_id)
-    if not os.path.exists(path):
-        raise BusinessError(ErrorCode.SCORE_IMPORT_INVALID, '导入预览结果不存在或已过期')
+    return runtime_storage.load_preview(
+        'score_imports', import_id, operator_id, 'SCORE_IMPORT_PREVIEW_DIR',
+        ErrorCode.SCORE_IMPORT_INVALID, '导入预览结果不存在或已过期',
+    )
 
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+
+def _delete_preview(import_id):
+    if not runtime_storage.delete_preview(
+        'score_imports', import_id, 'SCORE_IMPORT_PREVIEW_DIR', ErrorCode.SCORE_IMPORT_INVALID,
+    ):
+        logger.warning('成绩导入预览临时文件清理失败: import_id=%s', import_id)

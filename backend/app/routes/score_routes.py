@@ -18,6 +18,7 @@ def create_score():
         payload=data,
         operator_id=g.current_user['user_id'],
         trace_id=getattr(request, 'trace_id', ''),
+        current_user=g.current_user,
     )
     return success(result)
 
@@ -33,6 +34,7 @@ def update_score(score_id):
         payload=data,
         operator_id=g.current_user['user_id'],
         trace_id=getattr(request, 'trace_id', ''),
+        current_user=g.current_user,
     )
     return success(result)
 
@@ -57,7 +59,7 @@ def list_scores():
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 20, type=int)
 
-    result = score_service.list_scores(filters, page, page_size)
+    result = score_service.list_scores(filters, page, page_size, current_user=g.current_user)
     return success(result)
 
 
@@ -97,5 +99,6 @@ def delete_score(score_id):
         score_id=score_id,
         operator_id=g.current_user['user_id'],
         trace_id=getattr(request, 'trace_id', ''),
+        current_user=g.current_user,
     )
     return success(result)

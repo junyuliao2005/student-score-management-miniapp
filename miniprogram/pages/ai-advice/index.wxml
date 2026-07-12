@@ -41,7 +41,8 @@
 
   <!-- 结果展示 -->
   <view wx:if="{{result}}">
-    <mock-badge visible="{{result.is_mock}}" text="AI 演示模式" />
+    <mock-badge visible="{{result.mode === 'mock'}}" text="AI 演示模式" />
+    <mock-badge visible="{{result.mode === 'fallback'}}" text="真实模型不可用，已安全降级" />
 
     <!-- 优势科目 -->
     <ai-result-card
@@ -82,6 +83,14 @@
       <view class="meta-row">
         <text class="meta-label">分析引擎</text>
         <text class="meta-value">{{result.provider}}</text>
+      </view>
+      <view class="meta-row">
+        <text class="meta-label">结果模式</text>
+        <text class="meta-value">{{result.mode || (result.is_mock ? 'mock' : 'real')}}</text>
+      </view>
+      <view wx:if="{{result.model}}" class="meta-row">
+        <text class="meta-label">模型</text>
+        <text class="meta-value">{{result.model}}</text>
       </view>
     </view>
   </view>

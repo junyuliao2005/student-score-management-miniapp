@@ -24,7 +24,9 @@ def list_warnings():
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 20, type=int)
 
-    result = warning_calculator.get_warning_list(filters, page, page_size)
+    result = warning_calculator.get_warning_list(
+        filters, page, page_size, current_user=g.current_user,
+    )
     return success(result)
 
 
@@ -41,6 +43,7 @@ def refresh_warnings():
         term=term, class_name=class_name,
         operator_id=g.current_user['user_id'],
         trace_id=getattr(request, 'trace_id', ''),
+        current_user=g.current_user,
     )
 
     audit_service.write(

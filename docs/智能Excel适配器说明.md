@@ -166,14 +166,14 @@ Score test/converted/
 ## 使用命令
 
 ```bash
-cd "E:\mimo 小米，学生成绩小程序"
+cd "<PROJECT_ROOT>"
 python backend/scripts/convert_score_test_excels.py
 ```
 
 如需指定目录：
 
 ```bash
-python backend/scripts/convert_score_test_excels.py --input-dir "E:\mimo 小米，学生成绩小程序\Score test" --output-dir "E:\mimo 小米，学生成绩小程序\Score test\converted"
+python backend/scripts/convert_score_test_excels.py --input-dir "<PROJECT_ROOT>\Score test" --output-dir "<PROJECT_ROOT>\Score test\converted"
 ```
 
 ## 推荐导入顺序
@@ -188,7 +188,11 @@ python backend/scripts/convert_score_test_excels.py --input-dir "E:\mimo 小米�
 
 ## 后续优化
 
-- 增加小程序或管理后台的“字段映射确认”界面，让用户手动修正识别错误。
+- 后续可增加管理后台“字段映射确认”界面；当前规则识别已经支持宽表、长表、混合表、K12 课程白名单和错误行 Excel。
+
+## 导入批次账本
+
+适配器仍只生成标准模板，不写数据库。模板经过现有 preview/confirm 后，confirm 会生成独立 `import_batch_id`，并记录安全快照。管理员可在“导入批次”页面查看及执行快照保护的安全撤销。密码、密码哈希、Token、API Key 不进入账本。
 - 增加课程批量导入，直接处理 `courses_required.xlsx`。
 - 针对不同满分制支持比例换算，例如 150 分制转换为 100 分制，但需要业务确认。
 - 可选增加 AI 辅助字段识别，但不作为当前依赖，且 API Key 必须只放在后端。

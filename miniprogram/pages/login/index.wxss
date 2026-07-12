@@ -35,6 +35,51 @@
   background: #fafafa;
 }
 
+.dev-mode-card {
+  margin-bottom: 32rpx;
+  background: #f7f9fc;
+}
+
+.dev-mode-title {
+  margin-bottom: 16rpx;
+  color: #333333;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.dev-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border: 2rpx solid #1989fa;
+  border-radius: 8rpx;
+}
+
+.dev-mode-option {
+  height: 68rpx;
+  line-height: 68rpx;
+  text-align: center;
+  color: #1989fa;
+  background: #ffffff;
+  font-size: 28rpx;
+}
+
+.dev-mode-option + .dev-mode-option {
+  border-left: 2rpx solid #1989fa;
+}
+
+.dev-mode-option-active {
+  color: #ffffff;
+  background: #1989fa;
+}
+
+.dev-mode-hint {
+  margin-top: 14rpx;
+  color: #666666;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
 .account-list {
   display: flex;
   flex-direction: column;

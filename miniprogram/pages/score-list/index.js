@@ -4,6 +4,7 @@ const { LEVEL_TAG_CLASS } = require('../../utils/constants');
 const perm = require('../../utils/permission');
 const auth = require('../../utils/auth');
 const options = require('../../utils/options');
+const exportFile = require('../../utils/export_file');
 
 Page({
   data: {
@@ -51,6 +52,18 @@ Page({
     });
     this.loadOptions();
     this.loadData();
+  },
+
+  onExportScores() {
+    if (!this.data.filters.exam_batch) {
+      wx.showToast({ title: '请先选择考试批次', icon: 'none' });
+      return;
+    }
+    wx.showLoading({ title: '正在生成' });
+    get('/api/reports/scores/export', this.data.filters)
+      .then((data) => exportFile.openBase64File(data))
+      .catch((err) => wx.showToast({ title: err.message || '导出失败', icon: 'none' }))
+      .finally(() => wx.hideLoading());
   },
 
   loadOptions() {

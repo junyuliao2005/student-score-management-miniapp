@@ -2,14 +2,17 @@
 import json
 import logging
 import os
+import time
 import uuid
 
 from app.extensions import db
 from app.models.role import Role, UserRole
 from app.models.user import User
-from app.services import audit_service
+from app.services import audit_service, import_batch_service
 from app.utils.errors import BusinessError, ErrorCode
 from app.utils.hash_util import hash_password
+from app.utils.upload_security import validate_xlsx_upload
+from app.utils import runtime_storage
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ REQUIRED_FIELDS = ['student_id', 'real_name', 'class_name']
 DEFAULT_PASSWORD = '123456'
 
 
-def preview_import(file_storage):
+def preview_import(file_storage, operator_id):
     """解析并校验 .xlsx 学生基础信息文件，不写入 users 表。"""
     _validate_file(file_storage)
 
@@ -82,22 +85,31 @@ def preview_import(file_storage):
 
         rows.append(row)
 
+    for row in rows:
+        password = row.pop('password', None) or DEFAULT_PASSWORD
+        if row.get('status') == 'valid':
+            row['password_hash'] = hash_password(password)
+
     import_id = uuid.uuid4().hex
     result = {
         'import_id': import_id,
+        'source_filename': os.path.basename(str(file_storage.filename or 'students.xlsx')),
         'total_rows': total_rows,
         'valid_rows': valid_rows,
         'duplicate_rows': duplicate_rows,
         'error_rows': error_rows,
         'rows': rows,
     }
-    _save_preview(import_id, result)
+    cached_result = dict(result)
+    cached_result['operator_id'] = operator_id
+    cached_result['created_at'] = int(time.time())
+    _save_preview(import_id, cached_result)
     return _public_preview(result)
 
 
 def confirm_import(import_id, operator_id, trace_id):
     """导入 preview 中合法且数据库未重复的学生账号。"""
-    preview = _load_preview(import_id)
+    preview = _load_preview(import_id, operator_id)
     rows = preview.get('rows') or []
     student_role = Role.query.filter_by(role_name='student').first()
     if not student_role:
@@ -105,72 +117,79 @@ def confirm_import(import_id, operator_id, trace_id):
 
     inserted_count = 0
     skipped_count = 0
-    runtime_error_count = 0
-
-    for row in rows:
-        if row.get('status') != 'valid':
-            if row.get('status') == 'duplicate':
+    batch = None
+    try:
+        batch = import_batch_service.create_batch(
+            import_type='users',
+            operator_user_id=operator_id,
+            source_filename=preview.get('source_filename'),
+            total_rows=preview.get('total_rows', len(rows)),
+            metadata={
+                'preview_import_id': import_id,
+                'duplicate_rows': preview.get('duplicate_rows', 0),
+            },
+        )
+        for row in rows:
+            if row.get('status') != 'valid':
+                if row.get('status') == 'duplicate':
+                    skipped_count += 1
+                continue
+            student_id = row['student_id']
+            username = row['username']
+            if User.query.filter_by(user_id=student_id).first() or User.query.filter_by(username=username).first():
                 skipped_count += 1
-            continue
-
-        student_id = row['student_id']
-        username = row['username']
-        if User.query.filter_by(user_id=student_id).first() or User.query.filter_by(username=username).first():
-            skipped_count += 1
-            row['status'] = 'duplicate'
-            row['errors'] = ['学生或用户名已存在，已跳过']
-            continue
-
-        try:
-            with db.session.begin_nested():
-                user = User(
-                    user_id=student_id,
-                    username=username,
-                    password_hash=hash_password(row.get('password') or DEFAULT_PASSWORD),
-                    real_name=row['real_name'],
-                    class_name=row['class_name'],
-                    status=1,
-                )
-                db.session.add(user)
-                db.session.flush()
-                db.session.add(UserRole(user_id=student_id, role_id=student_role.role_id))
+                continue
+            user = User(
+                user_id=student_id,
+                username=username,
+                password_hash=row.get('password_hash') or hash_password(DEFAULT_PASSWORD),
+                real_name=row['real_name'],
+                class_name=row['class_name'],
+                status=1,
+            )
+            db.session.add(user)
+            db.session.flush()
+            db.session.add(UserRole(user_id=student_id, role_id=student_role.role_id))
+            db.session.flush()
+            import_batch_service.record_user_entry(batch, user, row_number=row.get('row_no'))
             inserted_count += 1
-        except Exception as exc:
-            runtime_error_count += 1
-            row['status'] = 'error'
-            row['errors'] = ['写入数据库失败']
-            logger.exception('学生批量导入单行失败: row=%s, error=%s', row.get('row_no'), exc)
 
-    audit_service.write(
-        action='user.import.confirm',
-        operator_id=operator_id,
-        target_type='user_import',
-        target_id=import_id,
-        detail={
-            'inserted_count': inserted_count,
-            'skipped_count': skipped_count,
-            'error_count': preview.get('error_rows', 0) + runtime_error_count,
-        },
-        trace_id=trace_id,
-    )
-    db.session.commit()
+        failed_count = max(int(preview.get('total_rows', len(rows))) - inserted_count, 0)
+        import_batch_service.complete_batch(batch, inserted_count, failed_count)
+        audit_service.write(
+            action='user.import.confirm',
+            operator_id=operator_id,
+            target_type='import_batch',
+            target_id=batch.import_batch_id,
+            detail={
+                'preview_import_id': import_id,
+                'inserted_count': inserted_count,
+                'skipped_count': skipped_count,
+                'error_count': preview.get('error_rows', 0),
+            },
+            trace_id=trace_id,
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    _delete_preview(import_id)
 
     return {
         'import_id': import_id,
+        'import_batch_id': batch.import_batch_id,
         'inserted_count': inserted_count,
         'skipped_count': skipped_count,
-        'error_count': preview.get('error_rows', 0) + runtime_error_count,
+        'error_count': preview.get('error_rows', 0),
         'task_status': 'done',
     }
 
 
 def _validate_file(file_storage):
-    if not file_storage:
-        raise BusinessError(ErrorCode.USER_IMPORT_INVALID, '请上传 Excel 文件')
-
-    filename = file_storage.filename or ''
-    if not filename.lower().endswith('.xlsx'):
-        raise BusinessError(ErrorCode.USER_IMPORT_INVALID, '仅支持 .xlsx 文件')
+    try:
+        validate_xlsx_upload(file_storage, max_size_mb=10)
+    except BusinessError as exc:
+        raise BusinessError(ErrorCode.USER_IMPORT_INVALID, exc.message, http_status=exc.http_status) from exc
 
 
 def _build_header_map(header_row):
@@ -281,32 +300,36 @@ def _is_empty_row(row_values):
 
 
 def _preview_dir():
-    backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    path = os.path.join(backend_root, '.tmp', 'user_imports')
-    os.makedirs(path, exist_ok=True)
-    return path
+    return runtime_storage.resolve_private_dir('USER_IMPORT_PREVIEW_DIR', 'user_imports')
 
 
 def _preview_path(import_id):
-    safe_id = ''.join(ch for ch in str(import_id or '') if ch.isalnum())
-    return os.path.join(_preview_dir(), f'{safe_id}.json')
+    return runtime_storage.preview_path(
+        'user_imports', import_id, 'USER_IMPORT_PREVIEW_DIR', ErrorCode.USER_IMPORT_INVALID,
+    )
 
 
 def _save_preview(import_id, data):
-    with open(_preview_path(import_id), 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    runtime_storage.save_preview(
+        'user_imports', import_id, data, 'USER_IMPORT_PREVIEW_DIR', ErrorCode.USER_IMPORT_INVALID,
+    )
 
 
-def _load_preview(import_id):
+def _load_preview(import_id, operator_id):
     if not import_id:
         raise BusinessError(ErrorCode.USER_IMPORT_INVALID, 'import_id 不能为空')
 
-    path = _preview_path(import_id)
-    if not os.path.exists(path):
-        raise BusinessError(ErrorCode.USER_IMPORT_INVALID, '导入预览结果不存在或已过期')
+    return runtime_storage.load_preview(
+        'user_imports', import_id, operator_id, 'USER_IMPORT_PREVIEW_DIR',
+        ErrorCode.USER_IMPORT_INVALID, '导入预览结果不存在或已过期',
+    )
 
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+
+def _delete_preview(import_id):
+    if not runtime_storage.delete_preview(
+        'user_imports', import_id, 'USER_IMPORT_PREVIEW_DIR', ErrorCode.USER_IMPORT_INVALID,
+    ):
+        logger.warning('学生导入预览临时文件清理失败: import_id=%s', import_id)
 
 
 def _public_preview(data):
@@ -315,5 +338,6 @@ def _public_preview(data):
     for row in data.get('rows') or []:
         public_row = dict(row)
         public_row.pop('password', None)
+        public_row.pop('password_hash', None)
         public['rows'].append(public_row)
     return public

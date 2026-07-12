@@ -41,7 +41,7 @@
   "compileType": "miniprogram",
   "libVersion": "2.25.4",
   "appid": "touristappid",
-  "projectname": "student-score-management-miniapp",
+  "projectname": "student-score-management",
   "condition": {},
   "simulatorPluginLibVersion": {},
   "editorSetting": {}

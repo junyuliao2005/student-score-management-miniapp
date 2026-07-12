@@ -1,0 +1,110 @@
+.page-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 24rpx;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.filter-control {
+  height: 72rpx;
+  line-height: 72rpx;
+  padding: 0 16rpx;
+  border: 1rpx solid #dbe2ea;
+  border-radius: 6rpx;
+  background: #fff;
+  box-sizing: border-box;
+  font-size: 26rpx;
+}
+
+.batch-item {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #e5e7eb;
+}
+
+.batch-header,
+.count-row,
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.batch-type,
+.detail-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.status-tag {
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+  background: #e8f3ff;
+  color: #1769aa;
+  font-size: 24rpx;
+}
+
+.status-rolled_back,
+.status-rollback_partial {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.batch-meta,
+.entry-note {
+  color: #64748b;
+  font-size: 25rpx;
+  margin-top: 8rpx;
+  overflow-wrap: anywhere;
+}
+
+.count-row {
+  margin: 18rpx 0;
+  font-size: 25rpx;
+}
+
+.success-text {
+  color: #16803a;
+}
+
+.error-text {
+  color: #c53030;
+}
+
+.pagination {
+  margin-top: 28rpx;
+}
+
+.state-text,
+.state-block {
+  padding: 60rpx 12rpx;
+  text-align: center;
+  color: #64748b;
+}
+
+.state-block button {
+  margin-top: 20rpx;
+}
+
+.detail-modal {
+  max-height: 82vh;
+}
+
+.entry-list {
+  height: 480rpx;
+  margin: 20rpx 0;
+  border-top: 1rpx solid #e5e7eb;
+  border-bottom: 1rpx solid #e5e7eb;
+}
+
+.entry-item {
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #eef2f6;
+  font-size: 26rpx;
+}

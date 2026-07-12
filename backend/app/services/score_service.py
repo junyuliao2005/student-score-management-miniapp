@@ -8,16 +8,15 @@ from app.extensions import db
 from app.models.score import Score
 from app.models.user import User
 from app.models.course import Course
-from app.services import audit_service
+from app.services import audit_service, teacher_scope_service
 from app.services import config_loader, stats_service
-from app.services import stats_service
 from app.utils.errors import BusinessError, ErrorCode
 from app.utils.validators import validate_pagination
 
 logger = logging.getLogger(__name__)
 
 
-def create_score(payload, operator_id, trace_id):
+def create_score(payload, operator_id, trace_id, current_user, commit=True):
     """
     新增成绩记录。
     校验：必填字段、分数范围、学生存在性、课程存在性、唯一性约束。
@@ -45,6 +44,10 @@ def create_score(payload, operator_id, trace_id):
     if course.status != 1:
         raise BusinessError(ErrorCode.COURSE_NOT_FOUND, '课程已停用',
                             data={'course_id': course_id})
+
+    teacher_scope_service.ensure_access(
+        current_user, student_id=student_id, course_id=course_id,
+    )
 
     # 唯一性检查：同一学生 + 同一课程 + 同一批次
     existing = Score.query.filter_by(
@@ -90,7 +93,10 @@ def create_score(payload, operator_id, trace_id):
         stats_service.refresh_student_derived(student_id, course.term)
         stats_service.refresh_rankings(term=course.term, class_name=student.class_name)
 
-        db.session.commit()
+        if commit:
+            db.session.commit()
+        else:
+            db.session.flush()
 
         return {
             'score_id': record.score_id,
@@ -102,15 +108,17 @@ def create_score(payload, operator_id, trace_id):
             'task_status': 'done',
         }
     except BusinessError:
-        db.session.rollback()
+        if commit:
+            db.session.rollback()
         raise
     except Exception as e:
-        db.session.rollback()
+        if commit:
+            db.session.rollback()
         logger.error(f'成绩写入失败: {e}', exc_info=True)
         raise BusinessError(ErrorCode.DB_TRANSACTION_FAILED, '数据库事务失败')
 
 
-def update_score(score_id, payload, operator_id, trace_id):
+def update_score(score_id, payload, operator_id, trace_id, current_user):
     """
     修改成绩记录。
     校验：记录存在、分数范围、唯一性冲突。
@@ -119,6 +127,9 @@ def update_score(score_id, payload, operator_id, trace_id):
     if not record:
         raise BusinessError(ErrorCode.STUDENT_NOT_FOUND, '成绩记录不存在',
                             data={'score_id': score_id})
+    teacher_scope_service.ensure_access(
+        current_user, student_id=record.student_id, course_id=record.course_id,
+    )
 
     # 记录原始值用于审计
     before = {
@@ -194,7 +205,7 @@ def update_score(score_id, payload, operator_id, trace_id):
         raise BusinessError(ErrorCode.DB_TRANSACTION_FAILED, '数据库事务失败')
 
 
-def list_scores(filters=None, page=1, page_size=20):
+def list_scores(filters=None, page=1, page_size=20, current_user=None):
     """
     教师/管理员分页查询成绩。
     支持筛选：student_id, student_name, course_id, course_name, class_name, term, exam_batch
@@ -223,6 +234,7 @@ def list_scores(filters=None, page=1, page_size=20):
     ).join(
         Course, Score.course_id == Course.course_id
     ).filter(Score.status == 1, User.status == 1)
+    query = teacher_scope_service.apply_score_scope(query, current_user)
 
     # 筛选条件
     if filters.get('student_id'):
@@ -297,14 +309,10 @@ def get_my_scores(student_id, filters=None):
         raise BusinessError(ErrorCode.STUDENT_NOT_FOUND, '学生不存在')
 
     from app.services import exam_publish_service
-    has_publish_settings = exam_publish_service.has_any_publish_settings()
-    published_settings = []
-    display_override = None
-    if has_publish_settings:
-        published_settings = exam_publish_service.get_published_settings_for_student(student_id, filters)
-        display_override = exam_publish_service.first_display_settings(published_settings)
-        if not published_settings:
-            return _my_scores_response(student, [], None, display_override, compatibility_mode=False)
+    published_settings = exam_publish_service.get_published_settings_for_student(student_id, filters)
+    display_override = exam_publish_service.first_display_settings(published_settings)
+    if not published_settings:
+        return _my_scores_response(student, [], None, display_override, compatibility_mode=False)
 
     resolved_course_id = None
     if filters.get('course_id'):
@@ -338,12 +346,11 @@ def get_my_scores(student_id, filters=None):
         query = query.filter(Score.course_id == resolved_course_id)
     if filters.get('exam_batch'):
         query = query.filter(Score.exam_batch == filters['exam_batch'])
-    if has_publish_settings:
-        publish_filters = [
-            and_(Course.term == setting.term, Score.exam_batch == setting.exam_batch)
-            for setting in published_settings
-        ]
-        query = query.filter(or_(*publish_filters))
+    publish_filters = [
+        and_(Course.term == setting.term, Score.exam_batch == setting.exam_batch)
+        for setting in published_settings
+    ]
+    query = query.filter(or_(*publish_filters))
 
     items = query.order_by(Course.course_id, Score.exam_date).all()
 
@@ -381,19 +388,16 @@ def get_my_scores(student_id, filters=None):
         scores_list,
         summary,
         display_override,
-        compatibility_mode=not has_publish_settings,
+        compatibility_mode=False,
     )
 
 
 def get_my_score_options(student_id):
     """返回当前学生实际有成绩的学期、考试批次和课程选项。"""
     from app.services import exam_publish_service
-    has_publish_settings = exam_publish_service.has_any_publish_settings()
-    published_settings = []
-    if has_publish_settings:
-        published_settings = exam_publish_service.get_published_settings_for_student(student_id)
-        if not published_settings:
-            return {'terms': [], 'exam_batches': [], 'courses': []}
+    published_settings = exam_publish_service.get_published_settings_for_student(student_id)
+    if not published_settings:
+        return {'terms': [], 'exam_batches': [], 'courses': []}
 
     records = db.session.query(
         Course.term,
@@ -410,9 +414,8 @@ def get_my_score_options(student_id):
         Score.exam_batch,
         Course.course_id,
     ).all()
-    if has_publish_settings:
-        allowed = {(setting.term, setting.exam_batch) for setting in published_settings}
-        records = [row for row in records if (row.term, row.exam_batch) in allowed]
+    allowed = {(setting.term, setting.exam_batch) for setting in published_settings}
+    records = [row for row in records if (row.term, row.exam_batch) in allowed]
 
     terms = _unique_options(
         (record.term, record.term)
@@ -440,12 +443,15 @@ def get_my_score_options(student_id):
     }
 
 
-def soft_delete_score(score_id, operator_id, trace_id):
+def soft_delete_score(score_id, operator_id, trace_id, current_user):
     """逻辑删除成绩（status 设为 0）"""
     record = Score.query.filter_by(score_id=score_id).first()
     if not record:
         raise BusinessError(ErrorCode.STUDENT_NOT_FOUND, '成绩记录不存在',
                             data={'score_id': score_id})
+    teacher_scope_service.ensure_access(
+        current_user, student_id=record.student_id, course_id=record.course_id,
+    )
 
     try:
         record.status = 0
